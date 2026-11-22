@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <random>
+#include <limits>
 namespace fs=std::filesystem;
 int main(){
  {std::istringstream i("MemTotal: 4096000 kB\nMemFree: 1000 kB\nMemAvailable: 1024000 kB\nSwapTotal: 2048 kB\nSwapFree: 5000 kB\n");auto m=mb::parse_memory(i);assert(!m.valid&&m.total==4096000&&m.available==1024000&&m.swap_free==2048);}
@@ -47,6 +48,41 @@ int main(){
   assert(mb::diagnostic_report(a).find("Cgroup v2")!=std::string::npos);
   a.memory.valid=false;d=mb::diagnose(a);assert(d.level=="unknown");
  }
+ {
+  std::istringstream v("pgmajfault 101\npswpin 17\npswpout 19\noom_kill 2\nunknown 999\n");
+  auto counters=mb::parse_vmstat(v);
+  assert(counters.available&&counters.oom_available);
+  assert(counters.major_faults==101&&counters.swap_in==17&&counters.swap_out==19&&counters.oom_kills==2);
+  std::istringstream damaged("pgmajfault -1\npswpin xx\npswpout 4\noom_kill 18446744073709551616\n");
+  auto bad=mb::parse_vmstat(damaged);assert(!bad.available&&!bad.oom_available);
+  std::istringstream old_kernel("pgmajfault 9\npswpin 4\npswpout 3\n");
+  auto optional=mb::parse_vmstat(old_kernel);assert(optional.available&&!optional.oom_available);
+ }
+ {
+  std::istringstream e("low 1\nhigh 2\nmax 3\noom 4\noom_kill 5\n");
+  auto events=mb::parse_cgroup_events(e);assert(events.available&&events.high==2&&events.oom_kill==5);
+  std::istringstream incomplete("high 8\noom invalid\noom_kill 2\n");
+  assert(!mb::parse_cgroup_events(incomplete).available);
+ }
+ {
+  mb::Snapshot a,b;a.vmstat={true,true,100,20,30,1};b.vmstat={true,true,120,24,35,2};
+  a.cgroup_events={true,0,5,0,2,1};b.cgroup_events={true,0,7,0,3,2};
+  auto diff=mb::telemetry_delta(a,b,2.0);
+  assert(diff.vm_available&&diff.cgroup_available&&!diff.reset_detected);
+  assert(diff.major_faults==20&&diff.swap_in==4&&diff.swap_out==5&&diff.oom_kills==1);
+  assert(diff.cgroup_high==2&&diff.cgroup_oom==1&&diff.cgroup_oom_kill==1);
+  assert(mb::signals_report(b,diff).find("major faults/s=10.00")!=std::string::npos);
+  assert(mb::telemetry_json(b,diff,2).find("\"telemetry_schema\":1")!=std::string::npos);
+  assert(!mb::telemetry_delta(a,b,0).vm_available);
+  assert(!mb::telemetry_delta(a,b,-1).vm_available);
+  assert(!mb::telemetry_delta(a,b,std::numeric_limits<double>::infinity()).vm_available);
+  b.vmstat.major_faults=1;b.cgroup_events.oom=0;
+  diff=mb::telemetry_delta(a,b,1);
+  assert(!diff.vm_available&&!diff.cgroup_available&&diff.reset_detected);
+  assert(diff.major_faults==0&&diff.cgroup_oom==0);
+  b.vmstat.available=false;b.cgroup_events.available=false;
+  diff=mb::telemetry_delta(a,b,1);assert(!diff.vm_available&&!diff.cgroup_available);
+ }
  char root_template[]="/tmp/memboost-test-XXXXXX";char* created=::mkdtemp(root_template);assert(created!=nullptr);auto root=fs::path(created);fs::create_directories(root/"sys/vm");
  auto sw=root/"sys/vm/swappiness",vf=root/"sys/vm/vfs_cache_pressure";
  {std::ofstream(sw)<<"60\n";std::ofstream(vf)<<"100\n";}
@@ -65,7 +101,7 @@ int main(){
  auto js=mb::json(mb::collect());assert(js.find("\"processes\"")!=std::string::npos);assert(js.find("\"ram_total_kib\"")!=std::string::npos);
  mb::Snapshot escaped;escaped.memory.total=1024;escaped.memory.available=512;escaped.memory.valid=true;
  escaped.processes.push_back({1,"foo\"\\bar\n",12});
- auto json=mb::json(escaped);assert(json.find("\"schema_version\":2")!=std::string::npos);
+ auto json=mb::json(escaped);assert(json.find("\"schema_version\":3")!=std::string::npos);
  assert(json.find("\"diagnosis\"")!=std::string::npos);assert(json.find("foo\\\"\\\\bar\\u000a")!=std::string::npos);
 
  std::cout<<"MemBoost core tests passed\n";

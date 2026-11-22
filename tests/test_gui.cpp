@@ -72,15 +72,15 @@ int main(int argc,char** argv) {
         if (!w) throw std::runtime_error("GUI window never appeared");
         std::this_thread::sleep_for(std::chrono::milliseconds(350));
         auto previous=fingerprint(d,w);
-        for (int i=1;i<6;i++) {
-            click(d,w,316+i*120,35);
+        for (int i=1;i<7;i++) {
+            click(d,w,265+i*((1040-265-16)/7)+28,35);
             std::this_thread::sleep_for(std::chrono::milliseconds(300));
             auto next=fingerprint(d,w);
             if (next==previous) throw std::runtime_error("tab "+std::to_string(i)+" did not update the rendered view");
             previous=next;
         }
         // Test profile selection and confirmation cancellation without writing host settings.
-        click(d,w,316+3*120,35);
+        click(d,w,265+4*((1040-265-16)/7)+28,35);
         std::this_thread::sleep_for(std::chrono::milliseconds(280));
         click(d,w,90,273);  // Select second profile.
         click(d,w,110,473); // Open confirmation modal.
@@ -102,7 +102,7 @@ int main(int argc,char** argv) {
         }
         if (pid!=-1) throw std::runtime_error("GUI did not exit on window close");
         if (!WIFEXITED(status) || WEXITSTATUS(status)!=0) throw std::runtime_error("GUI closed with error");
-        std::cout<<"X11 GUI: five tabs, diagnosis, profile, confirmation cancel and WM close passed\n";
+        std::cout<<"X11 GUI: seven tabs, diagnosis, profile, confirmation cancel and WM close passed\n";
         rc=0;
     } catch (const std::exception& e) { std::cerr<<"GUI test failed: "<<e.what()<<"\n"; }
     if (pid>0) {kill(pid,SIGTERM);waitpid(pid,nullptr,0);}

@@ -38,6 +38,69 @@ static bool parse_u64(const std::string& raw,uint64_t& out){
  const auto s=trim(raw);if(!numeric(s))return false;
  try {size_t n=0;auto v=std::stoull(s,&n);if(n!=s.size())return false;out=v;return true;}catch(...){return false;}
 }
+// Parsers use strict nonnegative decimal counters. Missing optional kernel
+// fields remain unavailable, instead of being misreported as zero activity.
+VmCounters parse_vmstat(std::istream& in) {
+ VmCounters v;std::string key,raw;bool major=false,swap_in=false,swap_out=false;
+ while(in>>key>>raw){uint64_t value=0;if(!parse_u64(raw,value))continue;
+  if(key=="pgmajfault"){v.major_faults=value;major=true;}
+  else if(key=="pswpin"){v.swap_in=value;swap_in=true;}
+  else if(key=="pswpout"){v.swap_out=value;swap_out=true;}
+  else if(key=="oom_kill"){v.oom_kills=value;v.oom_available=true;}
+ }
+ v.available=major&&swap_in&&swap_out;return v;
+}
+CgroupEvents parse_cgroup_events(std::istream& in){
+ CgroupEvents e;std::string key,raw;bool found_oom=false,found_kill=false;
+ while(in>>key>>raw){uint64_t value=0;if(!parse_u64(raw,value))continue;
+  if(key=="low")e.low=value;
+  else if(key=="high")e.high=value;
+  else if(key=="max")e.max=value;
+  else if(key=="oom"){e.oom=value;found_oom=true;}
+  else if(key=="oom_kill"){e.oom_kill=value;found_kill=true;}
+ }
+ e.available=found_oom&&found_kill;return e;
+}
+TelemetryDelta telemetry_delta(const Snapshot& before,const Snapshot& after,double seconds){
+ TelemetryDelta d;
+ if(!std::isfinite(seconds)||seconds<=0)return d;
+ d.seconds=seconds;
+ if(before.vmstat.available&&after.vmstat.available){
+  const auto& a=before.vmstat;const auto& b=after.vmstat;
+  if(b.major_faults<a.major_faults||b.swap_in<a.swap_in||b.swap_out<a.swap_out||
+    (a.oom_available&&b.oom_available&&b.oom_kills<a.oom_kills)) d.reset_detected=true;
+  else{d.vm_available=true;d.major_faults=b.major_faults-a.major_faults;
+   d.swap_in=b.swap_in-a.swap_in;d.swap_out=b.swap_out-a.swap_out;
+   if(a.oom_available&&b.oom_available)d.oom_kills=b.oom_kills-a.oom_kills;}
+ }
+ if(before.cgroup_events.available&&after.cgroup_events.available){
+  const auto& a=before.cgroup_events;const auto& b=after.cgroup_events;
+  if(b.high<a.high||b.oom<a.oom||b.oom_kill<a.oom_kill)d.reset_detected=true;
+  else{d.cgroup_available=true;d.cgroup_high=b.high-a.high;
+   d.cgroup_oom=b.oom-a.oom;d.cgroup_oom_kill=b.oom_kill-a.oom_kill;}
+ }
+ return d;
+}
+std::string signals_report(const Snapshot& s,const TelemetryDelta& d){
+ std::ostringstream o;
+ o<<"Memory telemetry | read-only, cumulative counters since boot/cgroup creation\n";
+ if(s.vmstat.available){o<<"Host major faults="<<s.vmstat.major_faults<<" pages; swap-in="<<s.vmstat.swap_in
+  <<" pages; swap-out="<<s.vmstat.swap_out<<" pages";
+  if(s.vmstat.oom_available)o<<"; OOM kills="<<s.vmstat.oom_kills;
+  o<<"\n";
+ }else o<<"Host vmstat counters unavailable\n";
+ if(s.cgroup_events.available)o<<"Cgroup v2 high="<<s.cgroup_events.high<<"; OOM="<<s.cgroup_events.oom
+  <<"; OOM kills="<<s.cgroup_events.oom_kill<<" (cumulative)\n";
+ else o<<"Cgroup memory.events not available\n";
+ if(d.vm_available){o<<std::fixed<<std::setprecision(2)<<"Observed over "<<d.seconds<<"s: major faults/s="
+  <<d.major_faults/d.seconds<<" swap-in pages/s="<<d.swap_in/d.seconds
+  <<" swap-out pages/s="<<d.swap_out/d.seconds<<" OOM kills="<<d.oom_kills<<"\n";}
+ if(d.cgroup_available)o<<"Cgroup interval: high events="<<d.cgroup_high
+  <<"; OOM events="<<d.cgroup_oom<<"; OOM kills="<<d.cgroup_oom_kill<<"\n";
+ if(d.reset_detected)o<<"Counter reset detected; rate from affected source suppressed.\n";
+ if(!d.vm_available&&!d.cgroup_available)o<<"No interval yet; use --track for measured rates.\n";
+ return o.str();
+}
 Cgroup parse_cgroup(const std::string& current,const std::string& limit,const std::string& swap_current,const std::string& swap_limit){
  Cgroup c;
  if(!parse_u64(current,c.current_bytes))return c;
@@ -116,6 +179,8 @@ Snapshot collect(){Snapshot s;{std::ifstream f("/proc/meminfo");s.memory=parse_m
  const fs::path cgroot=local_cgroup_mount();
  if(!cgroot.empty())s.cgroup=parse_cgroup(read_first(cgroot/"memory.current"),read_first(cgroot/"memory.max"),
                          read_first(cgroot/"memory.swap.current"),read_first(cgroot/"memory.swap.max"));
+ {std::ifstream f("/proc/vmstat");if(f)s.vmstat=parse_vmstat(f);}
+ if(!cgroot.empty()){std::ifstream f(cgroot/"memory.events");if(f)s.cgroup_events=parse_cgroup_events(f);}
  s.processes=top_processes();s.swappiness=read_first("/proc/sys/vm/swappiness");s.vfs_cache_pressure=read_first("/proc/sys/vm/vfs_cache_pressure");
  if(s.swappiness.empty()) s.swappiness="unavailable";
  if(s.vfs_cache_pressure.empty()) s.vfs_cache_pressure="unavailable";
@@ -165,9 +230,30 @@ std::string report(const Snapshot& s){std::ostringstream o;auto& m=s.memory;if(!
 static std::string esc(const std::string& s){std::ostringstream o;for(unsigned char c:s){if(c=='"'||c=='\\')o<<'\\'<<c;else if(c<32){o<<"\\u"<<std::hex<<std::setw(4)<<std::setfill('0')<<(unsigned)c<<std::dec;}else o<<c;}return o.str();}
 std::string json(const Snapshot& s){auto& m=s.memory;std::ostringstream o;o<<"{\"valid\":"<<(m.valid?"true":"false")<<",\"ram_total_kib\":"<<m.total<<",\"ram_available_kib\":"<<m.available<<",\"swap_total_kib\":"<<m.swap_total<<",\"swap_free_kib\":"<<m.swap_free<<",\"psi_available\":"<<(s.pressure.available?"true":"false")<<",\"psi_some_avg10\":"<<s.pressure.some10<<",\"psi_full_avg10\":"<<s.pressure.full10<<",\"swappiness\":\""<<esc(s.swappiness)<<"\",\"vfs_cache_pressure\":\""<<esc(s.vfs_cache_pressure)<<"\",\"processes\":[";
  for(size_t i=0;i<s.processes.size();++i){auto& p=s.processes[i];if(i)o<<",";o<<"{\"pid\":"<<p.pid<<",\"name\":\""<<esc(p.name)<<"\",\"rss_kib\":"<<p.rss_kib<<"}";}
- o<<"],\"zram\":[";for(size_t i=0;i<s.zram.size();++i){if(i)o<<",";o<<"\""<<esc(s.zram[i])<<"\"";}o<<"],\"schema_version\":2,\"cgroup\":{\"available\":"<<(s.cgroup.available?"true":"false")
+ o<<"],\"zram\":[";for(size_t i=0;i<s.zram.size();++i){if(i)o<<",";o<<"\""<<esc(s.zram[i])<<"\"";}o<<"],\"schema_version\":3,\"vmstat\":{\"available\":"<<(s.vmstat.available?"true":"false")
+ <<",\"major_faults\":"<<s.vmstat.major_faults<<",\"swap_in_pages\":"<<s.vmstat.swap_in
+ <<",\"swap_out_pages\":"<<s.vmstat.swap_out<<",\"oom_kills\":"<<s.vmstat.oom_kills
+ <<"},\"cgroup_events\":{\"available\":"<<(s.cgroup_events.available?"true":"false")
+ <<",\"high\":"<<s.cgroup_events.high<<",\"oom\":"<<s.cgroup_events.oom
+ <<",\"oom_kill\":"<<s.cgroup_events.oom_kill<<"},\"cgroup\":{\"available\":"<<(s.cgroup.available?"true":"false")
  <<",\"limited\":"<<(s.cgroup.limited?"true":"false")<<",\"current_bytes\":"<<s.cgroup.current_bytes
  <<",\"limit_bytes\":"<<s.cgroup.limit_bytes<<",\"swap_available\":"<<(s.cgroup.swap_available?"true":"false")
  <<",\"swap_current_bytes\":"<<s.cgroup.swap_current_bytes<<"},\"diagnosis\":{\"level\":\""<<esc(diagnose(s).level)<<"\"}}";
  return o.str();}
+std::string telemetry_json(const Snapshot& s,const TelemetryDelta& d,unsigned sample){
+ std::ostringstream o;
+ o<<"{\"telemetry_schema\":1,\"sample\":"<<sample<<",\"snapshot\":"<<json(s)
+  <<",\"interval\":{\"seconds\":"<<std::fixed<<std::setprecision(4)<<d.seconds
+  <<",\"vm_available\":"<<(d.vm_available?"true":"false")
+  <<",\"cgroup_available\":"<<(d.cgroup_available?"true":"false")
+  <<",\"reset_detected\":"<<(d.reset_detected?"true":"false")
+  <<",\"major_faults\":"<<d.major_faults
+  <<",\"swap_in_pages\":"<<d.swap_in<<",\"swap_out_pages\":"<<d.swap_out
+  <<",\"oom_kills\":"<<d.oom_kills
+  <<",\"cgroup_high\":"<<d.cgroup_high
+  <<",\"cgroup_oom\":"<<d.cgroup_oom
+  <<",\"cgroup_oom_kills\":"<<d.cgroup_oom_kill<<"}}";
+ return o.str();
+}
+
 }

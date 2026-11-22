@@ -11,16 +11,36 @@ struct Cgroup {
  bool available=false, limited=false, swap_available=false, swap_limited=false;
  uint64_t current_bytes=0, limit_bytes=0, swap_current_bytes=0, swap_limit_bytes=0;
 };
+// Cumulative counters: never interpret these as instantaneous load.
+struct VmCounters {
+ bool available=false, oom_available=false;
+ uint64_t major_faults=0, swap_in=0, swap_out=0, oom_kills=0;
+};
+struct CgroupEvents {
+ bool available=false;
+ uint64_t low=0, high=0, max=0, oom=0, oom_kill=0;
+};
+struct TelemetryDelta {
+ bool vm_available=false, cgroup_available=false, reset_detected=false;
+ double seconds=0;
+ uint64_t major_faults=0, swap_in=0, swap_out=0, oom_kills=0;
+ uint64_t cgroup_high=0, cgroup_oom=0, cgroup_oom_kill=0;
+};
 struct Diagnosis {
  std::string level="unknown";
  std::vector<std::string> findings, advice;
 };
 struct Process { int pid=0; std::string name; uint64_t rss_kib=0; };
-struct Snapshot { Memory memory; Pressure pressure; std::vector<Process> processes; std::vector<std::string> zram; Cgroup cgroup; std::string swappiness="unavailable", vfs_cache_pressure="unavailable"; };
+struct Snapshot { Memory memory; Pressure pressure; std::vector<Process> processes; std::vector<std::string> zram; Cgroup cgroup; VmCounters vmstat; CgroupEvents cgroup_events; std::string swappiness="unavailable", vfs_cache_pressure="unavailable"; };
 struct Profile { std::string name; int swappiness; int vfs_cache_pressure; std::string explanation; };
 struct ApplyResult { bool ok=false; std::string message; };
 Memory parse_memory(std::istream& input);
 Pressure parse_pressure(std::istream& input);
+VmCounters parse_vmstat(std::istream& input);
+CgroupEvents parse_cgroup_events(std::istream& input);
+TelemetryDelta telemetry_delta(const Snapshot& before, const Snapshot& after, double seconds);
+std::string signals_report(const Snapshot& s, const TelemetryDelta& diff);
+std::string telemetry_json(const Snapshot& s, const TelemetryDelta& diff, unsigned sample);
 Cgroup parse_cgroup(const std::string& current,const std::string& limit,const std::string& swap_current,const std::string& swap_limit);
 Diagnosis diagnose(const Snapshot& s);
 std::string diagnostic_report(const Snapshot& s);
