@@ -97,6 +97,12 @@ jobs:
             cmp LICENSE /usr/share/licenses/memboost-pro/LICENSE
             cmp LICENSES/MIT-legacy.txt /usr/share/licenses/memboost-pro/MIT-legacy.txt
             /usr/bin/memboost --self-test
+            # A Smart Optimize preview must not modify live VM sysctls.
+            before_sw=$(cat /proc/sys/vm/swappiness)
+            before_vfs=$(cat /proc/sys/vm/vfs_cache_pressure)
+            /usr/bin/memboost --optimize --dry-run
+            test "$(cat /proc/sys/vm/swappiness)" = "$before_sw"
+            test "$(cat /proc/sys/vm/vfs_cache_pressure)" = "$before_vfs"
             /usr/bin/memboost --diagnose
             /usr/bin/memboost --signals
             /usr/bin/memboost --track --samples 2 --interval-ms 200 --format jsonl | python3 -c "import json,sys; lines=[json.loads(x) for x in sys.stdin]; assert len(lines)==2 and all(x['telemetry_schema']==1 for x in lines)"

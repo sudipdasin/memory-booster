@@ -26,6 +26,11 @@ def main():
     assert run('--version').returncode == 0
     assert run('--status').returncode == 0
     assert run('--diagnose').returncode == 0
+    preview=run('--optimize')
+    assert preview.returncode==0 and 'optimization preview' in preview.stdout.lower()
+    assert run('--optimize','--dry-run').returncode==0
+    for invalid in (('--optimize','--bogus'),('--optimize','--yes','--dry-run')):
+        assert run(*invalid).returncode != 0
     signals = run('--signals')
     assert signals.returncode == 0 and 'cumulative counters' in signals.stdout
     watch = run('--watch', '--samples', '2', '--interval-ms', '200')

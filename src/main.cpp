@@ -13,10 +13,10 @@
 #ifdef MEMBOOST_WITH_X11
 int gui_main(int argc,char** argv);
 #endif
-static void usage(){std::cout<<"MemBoost Pro v" MEMBOOST_VERSION "\nUsage: memboost [--status|--json|--diagnose|--signals|--recommend|--self-test|--gui]\n       memboost --watch [--samples 1..60] [--interval-ms 200..60000]\n       memboost --track [--samples 2..60] [--interval-ms 200..60000] [--format text|jsonl]\n       memboost --apply balanced|responsive|compressed-swap --dry-run\n       pkexec memboost --apply PROFILE --yes\n\nNo system changes occur without --apply PROFILE --yes and root privileges.\n";}
+static void usage(){std::cout<<"MemBoost Pro v" MEMBOOST_VERSION "\nUsage: memboost [--status|--json|--diagnose|--signals|--recommend|--self-test|--gui]\n       memboost --watch [--samples 1..60] [--interval-ms 200..60000]\n       memboost --track [--samples 2..60] [--interval-ms 200..60000] [--format text|jsonl]\n       memboost --optimize [--dry-run]  # read-only preview\n       pkexec memboost --optimize --yes  # conditional, confirmed tuning\n       memboost --apply balanced|responsive|compressed-swap --dry-run\n       pkexec memboost --apply PROFILE --yes\n\nNo system changes occur without --apply PROFILE --yes and root privileges.\n";}
 int main(int argc,char** argv){
  std::string command=argc>1?argv[1]:"--gui";
- if((command!="--apply" && command!="--watch" && command!="--track" && argc>2) || (command=="--apply" && argc>7)){std::cerr<<"Unexpected extra arguments\n";return 2;}
+ if((command!="--apply" && command!="--watch" && command!="--track" && command!="--optimize" && argc>2) || (command=="--apply" && argc>7)){std::cerr<<"Unexpected extra arguments\n";return 2;}
  if(command=="--version"){std::cout<<"MemBoost Pro " MEMBOOST_VERSION "\n";return 0;}
  if(command=="--help"||command=="-h"){usage();return 0;}
  if(command=="--status"||command=="--json"){auto s=mb::collect();if(command=="--json")std::cout<<mb::json(s)<<"\n";else std::cout<<mb::report(s);return s.memory.valid?0:2;}
@@ -78,6 +78,19 @@ int main(int argc,char** argv){
   std::cout<<"Memory tuning interface: "<<((numeric(s.swappiness)&&numeric(s.vfs_cache_pressure))?"readable":"unavailable")<<"\n";
   std::cout<<"No system settings were changed.\n";
   return ok?0:2;
+ }
+ if(command=="--optimize"){
+  if(argc>3){std::cerr<<"Too many optimize options\n";return 2;}
+  bool apply=false;
+  if(argc==3){std::string flag=argv[2];if(flag=="--yes")apply=true;
+   else if(flag!="--dry-run"){std::cerr<<"Unknown optimize option\n";return 2;}}
+  auto snapshot=mb::collect();auto plan=mb::plan_optimization(snapshot);
+  std::cout<<mb::optimization_report(snapshot);
+  if(!apply)return snapshot.memory.valid?0:2;
+  if(!plan.can_apply){std::cout<<"No changes applied.\n";return plan.action==mb::OptimizationAction::unavailable?2:0;}
+  if(::geteuid()!=0){std::cerr<<"Administrator authorization required.\n";return 1;}
+  const auto res=mb::apply_profile(mb::profiles().at(1));
+  std::cout<<res.message<<"\n";return res.ok?0:1;
  }
  if(command=="--recommend"){auto s=mb::collect();std::cout<<mb::report(s)<<"\nAvailable profiles (recommendations, never automatic):\n";for(auto& p:mb::profiles())std::cout<<"  "<<p.name<<": "<<p.explanation<<"\n";return s.memory.valid?0:2;}
  if(command=="--apply"){

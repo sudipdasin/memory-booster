@@ -85,6 +85,40 @@ int main(){
   b.vmstat.available=false;b.cgroup_events.available=false;
   diff=mb::telemetry_delta(a,b,1);assert(!diff.vm_available&&!diff.cgroup_available);
  }
+ {
+  mb::Snapshot healthy;healthy.memory.valid=true;healthy.memory.total=1048576;
+  healthy.memory.available=800000;healthy.memory.swap_total=524288;
+  healthy.swappiness="60";healthy.vfs_cache_pressure="100";
+  healthy.pressure.available=true;healthy.pressure.some10=0.25;
+  auto plan=mb::plan_optimization(healthy);
+  assert(!plan.can_apply&&plan.action==mb::OptimizationAction::observe);
+  assert(mb::optimization_report(healthy).find("No system changes recommended")!=std::string::npos);
+  healthy.pressure.some10=8.0;
+  plan=mb::plan_optimization(healthy);
+  assert(plan.can_apply&&plan.action==mb::OptimizationAction::offer_responsive);
+  assert(mb::optimization_report(healthy).find("administrator")!=std::string::npos || mb::optimization_report(healthy).find("authorize")!=std::string::npos);
+  healthy.swappiness="20";healthy.vfs_cache_pressure="75";
+  assert(!mb::plan_optimization(healthy).can_apply);
+  // A one-click optimizer must never increase already-low custom preferences.
+  healthy.swappiness="10";healthy.vfs_cache_pressure="100";
+  assert(!mb::plan_optimization(healthy).can_apply);
+  healthy.swappiness="60";healthy.vfs_cache_pressure="50";
+  assert(!mb::plan_optimization(healthy).can_apply);
+  healthy.swappiness="INVALID";assert(mb::plan_optimization(healthy).action==mb::OptimizationAction::unavailable);
+  healthy.swappiness="60";healthy.pressure.some10=28;
+  assert(mb::plan_optimization(healthy).action==mb::OptimizationAction::investigate);
+  healthy.pressure.some10=8;healthy.memory.available=130000;
+  assert(!mb::plan_optimization(healthy).can_apply);
+  healthy.memory.available=800000;healthy.memory.swap_total=0;
+  assert(!mb::plan_optimization(healthy).can_apply);
+  healthy.memory.swap_total=524288;healthy.pressure.available=false;
+  assert(!mb::plan_optimization(healthy).can_apply);
+  healthy.pressure.available=true;healthy.cgroup.available=true;healthy.cgroup.limited=true;
+  healthy.cgroup.current_bytes=95;healthy.cgroup.limit_bytes=100;
+  assert(mb::plan_optimization(healthy).action==mb::OptimizationAction::investigate);
+  healthy.cgroup.available=false;healthy.memory.valid=false;
+  assert(mb::plan_optimization(healthy).action==mb::OptimizationAction::unavailable);
+ }
  char root_template[]="/tmp/memboost-test-XXXXXX";char* created=::mkdtemp(root_template);assert(created!=nullptr);auto root=fs::path(created);fs::create_directories(root/"sys/vm");
  auto sw=root/"sys/vm/swappiness",vf=root/"sys/vm/vfs_cache_pressure";
  {std::ofstream(sw)<<"60\n";std::ofstream(vf)<<"100\n";}

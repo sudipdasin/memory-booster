@@ -1,70 +1,70 @@
-# MemBoost Pro Community — v3.0.1
+# MemBoost Pro Community — v3.2.0
 
-**Native C++17 Linux memory diagnostics and conservative, confirmed tuning.** The owner has approved the **GNU General Public License version 3 or later** for this Community release. The GPL-bearing v3.0.1 release has been merged into the official `main` branch. **The owner controls public visibility.** Until the repository is made public, downloads require GitHub access.
+**A Linux memory cockpit with a smarter, safer Optimize Memory button.** Native C++17/X11, no account or cloud dependency, GPL-3.0-or-later.
 
-## License and public development
+![MemBoost Pro 3.2 dashboard, actual application capture](assets/memboost-v3.2-dashboard.png)
 
-**License: [GPL-3.0-or-later](LICENSE)** · [Copyright and original MIT notices](COPYRIGHT.md) · [Preserved historical MIT notice](LICENSES/MIT-legacy.txt) · [Review governance](docs/RELEASE_GOVERNANCE.md)
+<details><summary><strong>See the optimization preview dialog</strong></summary>
 
-Anyone may use, modify and redistribute the Community code in compliance with GPL, including commercial redistribution. This does **not** authorize modifying the canonical repository without accepted pull requests. Owner review must be enabled in GitHub branch rules; CODEOWNERS alone is not enforcement.
+![MemBoost Pro 3.2 optimization safety preview](assets/memboost-v3.2-preview.png)
 
-**Historical release note:** earlier artifacts through v3.0.0 remain available under their original MIT license grants. Changing this checkout's license does not retract previously granted MIT rights or relicense previous binaries retroactively.
+</details>
 
-## Download MemBoost Pro Community v3.0.1 for Linux
+## Download and installation
 
-| File | GitHub versioned download |
+| Package | Direct repository download |
 |---|---|
-| Debian 13 x86-64 `.deb` | [Download Debian package](downloads/v3.0.1/MemBoost-Pro-3.0.1-linux-amd64.deb?raw=1) |
-| Linux x86-64 `.tar.gz` | [Download portable archive](downloads/v3.0.1/MemBoost-Pro-3.0.1-linux-amd64.tar.gz?raw=1) |
-| Complete GPL-covered C++ source | [Download source archive](downloads/v3.0.1/MemBoost-Pro-3.0.1-source.tar.gz?raw=1) |
-| DEB, Linux archive, source, GPL and checksum ZIP | [Download ZIP](downloads/v3.0.1/MemBoost-Pro-3.0.1-download-bundle.zip?raw=1) |
-| SHA-256 manifest | [Verify downloads](downloads/v3.0.1/SHA256SUMS.txt) |
+| Debian 13 x86-64 `.deb` | [Download DEB](downloads/v3.2.0/MemBoost-Pro-3.2.0-linux-amd64.deb?raw=1) |
+| Linux x86-64 `.tar.gz` | [Download portable archive](downloads/v3.2.0/MemBoost-Pro-3.2.0-linux-amd64.tar.gz?raw=1) |
+| Full GPL C++ source | [Download source](downloads/v3.2.0/MemBoost-Pro-3.2.0-source.tar.gz?raw=1) |
+| Full download ZIP | [Download complete bundle](downloads/v3.2.0/MemBoost-Pro-3.2.0-download-bundle.zip?raw=1) |
+| Checksums / release notes | [SHA-256](downloads/v3.2.0/SHA256SUMS.txt) · [Release notes](downloads/v3.2.0/RELEASE-NOTES.md) |
 
-These exact versioned files are committed to `main` as repository-hosted downloads. They are **not yet attached to a formal GitHub Releases entry**. Once visibility is public, verify anonymous downloads and SHA-256 checksums. The `.deb` targets a tested Debian 13 x86-64 baseline; Ubuntu 24.04 is validated separately using a VM-built package. No universal Linux compatibility or native Windows `.exe` is claimed.
+**Note:** These files are repository-hosted distributions. [GitHub Releases](https://github.com/sudipdasin/memory-booster/releases) is a separate publishing step and may have no formal entry until the owner publishes one. The package was built on Debian 13 x86-64; an independently built Ubuntu 24.04 VM package is exercised in CircleCI. Older distributions, other CPUs and Wayland-only sessions are **not** certified by these results.
 
 ```bash
-sudo apt install ./MemBoost-Pro-3.0.1-linux-amd64.deb
+sudo apt install ./MemBoost-Pro-3.2.0-linux-amd64.deb
 memboost --self-test
 memboost --gui
 ```
 
-## Core features
+## Optimize Memory — how it actually works
 
-- Seven native X11/XWayland GUI tabs: Overview, Processes, Diagnosis, Telemetry, Profiles, Setup guide, Activity.
-- Available RAM, swap, PSI memory pressure and zram, with cgroup v2 limits where available.
-- Read-only `/proc/vmstat`, OOM and paging event counters, bounded local telemetry sampling, JSONL output.
-- Confirmed, temporary kernel swappiness and VFS pressure profiles with readback verification and rollback on error.
-- No automatic cache drops, swap cycling, process killing, unsolicited privileged writes, cloud upload or background services.
-
-![Native seven-tab Linux MemBoost interface](assets/memboost-v3-dashboard.png)
-
-## Read-only CLI and diagnostics
+1. Click the prominent **OPTIMIZE MEMORY** button on the dashboard, or run `memboost --optimize` in a terminal.
+2. The app reads RAM headroom, Linux PSI memory stalls, swap availability, cgroup constraints and current swappiness/VFS tuning values. No configuration is changed by the preview.
+3. **Healthy, unknown or unsafe conditions:** the app recommends monitoring or investigation. It does *not* claim fake RAM gains, kill applications, clear useful filesystem caches or cycle swap.
+4. **Moderate sustained stalls plus sufficient headroom:** if appropriate, it **offers** an optional temporary `responsive` profile (swappiness 20, VFS cache pressure 75). You must confirm it, and administrator authorization is required. Values are verified and rollback is attempted if a write fails. Your workload may or may not benefit.
 
 ```bash
-memboost --status
-memboost --json
-memboost --diagnose
-memboost --signals
-memboost --track --samples 5 --interval-ms 1000 --format jsonl > sample.jsonl
-memboost --apply balanced --dry-run
+memboost --optimize --dry-run          # read-only preview
+pkexec memboost --optimize --yes       # opt-in conditional action
+memboost --diagnose                   # read-only health report
+memboost --track --samples 5 --interval-ms 1000 --format jsonl
 ```
 
-## Rebuild and verify the public source
+**There is no risk-free universal “boost memory” command.** Linux manages useful page cache automatically; unnecessary eviction or forced process termination can *reduce* performance or lose data. This application favors actual measurements and user control.
+
+## Features
+
+- Seven-section modern dark UI, keyboard shortcut `O` for the Optimize preview and `Esc` to cancel.
+- Live RAM, swap, available headroom, PSI, 120-point memory graph, cgroup limits and process RSS.
+- Read-only paging, swap-in/swap-out, OOM telemetry and bounded JSONL sampling.
+- Three advanced, temporary tuning profiles with explicit confirmation; no unattended kernel writes.
+- Optional anti-aliased Xft text using the desktop's installed system fonts; core-X11 fallback when Xft is unavailable. **No font files are bundled.**
+- Native Debian/TGZ packaging, source archive, SHA-256 manifest, CircleCI jobs and independent Ubuntu 24.04 machine-VM install/uninstall test.
+
+## Build, test and contribute
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DMEMBOOST_BUILD_GUI=ON
 cmake --build build --parallel 2
 ctest --test-dir build --output-on-failure
 python3 scripts/public_release_audit.py
-python3 scripts/make_release.py --build-dir build-release
+python3 scripts/make_release.py --build-dir build-package
 ```
 
-Requires a C++17 compiler, CMake >=3.16 and optional X11 development headers for native GUI. CLI builds do not require a display server. No guaranteed operation on non-Linux kernels.
+C++17, CMake >= 3.16 and Linux with X11 development headers are needed for the native GUI build. CLI-only builds work without X11. The optional text renderer dynamically loads the system's `libXft.so.2` if present. No GTK/WebView runtime is needed.
 
-## GitHub governance and public launch
+**License:** GNU General Public License version 3 or later ([GPL-3.0-or-later](LICENSE)) for current Community source, retaining historic MIT notices in [COPYRIGHT.md](COPYRIGHT.md) and [LICENSES/MIT-legacy.txt](LICENSES/MIT-legacy.txt). Previously granted MIT rights for older versions are not revoked.
 
-The owner-authorized [v2 PR #1](https://github.com/sudipdasin/memory-booster/pull/1), [v3 PR #2](https://github.com/sudipdasin/memory-booster/pull/2), and [GPL v3.0.1 PR #3](https://github.com/sudipdasin/memory-booster/pull/3) have **all merged into main**. Future contributions to the canonical repository must go through owner-approved pull requests. GPL permits forks; it does not give contributors direct write access.
-
-**Owner action before public launch:** Enable an active GitHub ruleset for `main` and `release/*` requiring pull requests, approved reviews, all three CircleCI jobs, and preventing direct pushes, force pushes, branch deletion and unattended merges. Check old Git history, branches and binary archives for sensitive material and confirm third-party licensing. CODEOWNERS by itself does **not** enforce approval. CircleCI remains the exclusive CI provider; GitHub Actions is not used.
-
-See [public launch checklist](docs/PUBLIC_READINESS.md), [release instructions](docs/RELEASE_PUBLISHING.md), [contribution policy](CONTRIBUTING.md) and [security reporting](SECURITY.md).
+**Repository governance:** changes to the official project require owner-approved PRs, with enforced GitHub branch rulesets configured by the owner. `.github/CODEOWNERS` is an intent file, not a substitute for active branch protection. Only CircleCI is used for CI; GitHub Actions is not used. See [Contributing](CONTRIBUTING.md), [Security](SECURITY.md), [Release governance](docs/RELEASE_GOVERNANCE.md), [Release publishing](docs/RELEASE_PUBLISHING.md) and [Public readiness](docs/PUBLIC_READINESS.md).
