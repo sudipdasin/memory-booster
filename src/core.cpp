@@ -23,7 +23,7 @@ Memory parse_memory(std::istream& in){
  while(std::getline(in,line)){std::istringstream is(line);std::string key,unit;uint64_t value=0;if(!(is>>key>>value))continue;if(key.empty()||key.back()!=':')continue;key.pop_back();if(!(is>>unit)||unit!="kB")continue;vals[key]=value;}
  auto get=[&](const char* k){auto it=vals.find(k);return it==vals.end()?uint64_t(0):it->second;};
  m.total=get("MemTotal");m.free=get("MemFree");m.available=get("MemAvailable");m.cached=get("Cached");m.buffers=get("Buffers");m.swap_total=get("SwapTotal");m.swap_free=get("SwapFree");m.valid=m.total>0;
- if(!vals.count("MemAvailable")){uint64_t v=m.free+m.cached+m.buffers;m.available=std::min(v,m.total);}
+ if(!vals.count("MemAvailable")){uint64_t v=m.free;for(auto n:{m.cached,m.buffers}){v = (n > m.total || v > m.total-n) ? m.total : v+n;}m.available=std::min(v,m.total);}
  m.available=std::min(m.available,m.total);m.swap_free=std::min(m.swap_free,m.swap_total);return m;
 }
 Pressure parse_pressure(std::istream& in){Pressure p;std::string line;
@@ -61,10 +61,21 @@ ApplyResult apply_profile(const Profile& p,const std::string& proc_root,bool dry
  auto old_sw=read_first(sw),old_vf=read_first(vf);if(!numeric(old_sw)||!numeric(old_vf))return {false,"Kernel settings unavailable or unreadable"};
  if(dry_run)return {true,"Dry run: would change swappiness "+old_sw+" -> "+std::to_string(p.swappiness)+", vfs_cache_pressure "+old_vf+" -> "+std::to_string(p.vfs_cache_pressure)};
  if(proc_root=="/proc" && ::geteuid()!=0)return {false,"Administrator privileges required (use pkexec)"};
- if(!write_value(sw,std::to_string(p.swappiness)))return {false,"Could not update swappiness; no change confirmed"};
- if(!write_value(vf,std::to_string(p.vfs_cache_pressure))){bool rollback=write_value(sw,old_sw);return {false,rollback?"Failed to change vfs_cache_pressure; restored swappiness":"Failed to change vfs_cache_pressure; rollback ALSO FAILED: check swappiness immediately"};}
+ // A failed write can still have partially modified a kernel value. Always
+ // attempt both rollbacks, then read back both original values.
+ auto restore=[&](){
+  bool ok_sw=write_value(sw,old_sw);
+  bool ok_vf=write_value(vf,old_vf);
+  return ok_sw&&ok_vf&&read_first(sw)==old_sw&&read_first(vf)==old_vf;
+ };
+ if(!write_value(sw,std::to_string(p.swappiness))){
+  bool restored=restore();return {false,restored?"Could not update swappiness; original settings verified":"Swappiness write failed; rollback incomplete, inspect kernel values"};
+ }
+ if(!write_value(vf,std::to_string(p.vfs_cache_pressure))){
+  bool restored=restore();return {false,restored?"VFS cache pressure write failed; original settings restored":"VFS cache pressure write failed; rollback incomplete, inspect kernel values"};
+ }
  if(read_first(sw)!=std::to_string(p.swappiness)||read_first(vf)!=std::to_string(p.vfs_cache_pressure)){
-  bool ok1=write_value(sw,old_sw),ok2=write_value(vf,old_vf);return {false,ok1&&ok2?"Verification failed; reverted changes":"Verification failed; rollback incomplete, inspect kernel values"};
+  bool restored=restore();return {false,restored?"Verification failed; original settings restored":"Verification failed; rollback incomplete, inspect kernel values"};
  }
  return {true,"Applied "+p.name+" temporarily (reset by reboot); original swappiness="+old_sw+", vfs_cache_pressure="+old_vf};
 }

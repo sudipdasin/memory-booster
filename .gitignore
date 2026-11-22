@@ -5,3 +5,10 @@
 *.tar.gz
 *.zip
 .DS_Store
+
+# Intentional checked-in, versioned release packages
+!downloads/
+!downloads/v0.1.1/
+!downloads/v0.1.1/*.deb
+!downloads/v0.1.1/*.tar.gz
+!downloads/v0.1.1/*.zip

@@ -1,5 +1,30 @@
 # MemBoost Pro
 
+**v0.1.1 — downloadable Linux release (Debian 13 x86-64 baseline).** The private repository provides verified local packages directly on the GitHub homepage; this does **not** mean a GitHub Releases entry was created. Packages for other distributions are not certified.
+
+## Download / Install
+
+| Package | Download |
+|---|---|
+| Debian 13 / compatible amd64 `.deb` | [**Download DEB**](downloads/v0.1.1/MemBoost-Pro-0.1.1-linux-amd64.deb?raw=1) |
+| Linux amd64 archive (`.tar.gz`) | [Download portable archive](downloads/v0.1.1/MemBoost-Pro-0.1.1-linux-amd64.tar.gz?raw=1) |
+| C++ source (`.tar.gz`) | [Download source](downloads/v0.1.1/MemBoost-Pro-0.1.1-source.tar.gz?raw=1) |
+| Complete ZIP / checksums / notes | [Download bundle](downloads/v0.1.1/MemBoost-Pro-0.1.1-download-bundle.zip?raw=1) · [SHA-256](downloads/v0.1.1/SHA256SUMS.txt) · [Release notes](docs/releases/v0.1.1.md) |
+
+```bash
+sudo apt install ./MemBoost-Pro-0.1.1-linux-amd64.deb
+memboost --status
+memboost --gui
+```
+
+**Compatibility:** Linux x86-64, X11 or XWayland for GUI, and on Debian package builds **glibc ≥ 2.38 / libstdc++ ≥ 13.1**. Not compatible with all Ubuntu/Mint versions; build from source on older systems. The portable tarball is still dynamically linked and has the same minimum shared-library versions. The repository is private, so GitHub downloads require an authorized account.
+
+![MemBoost Pro desktop overview](assets/memboost-overview.png)
+
+*Actual screenshot of the native X11 dashboard under a virtual X11 display. Diagnostic values depend on the system.*
+
+**Release gate:** Local GUI/headless builds, 8 tests each, sanitizer tests, packaging and extracted-package smoke tests pass. CircleCI execution on this commit, independent distro/VM testing, signature verification and GitHub Releases asset hosting remain unverified. **Do not describe this as universally stable across distributions.**
+
 Native **C++17** Linux memory diagnostics and guarded tuning with a graphical desktop dashboard and headless CLI. Built for Linux distributions exposing procfs and sysfs, with an X11 GUI (also runs through XWayland where available).
 
 ## What works
@@ -11,7 +36,7 @@ Native **C++17** Linux memory diagnostics and guarded tuning with a graphical de
 - Three documented, temporary kernel tuning profiles (only swappiness and VFS cache pressure)
 - Confirmation dialog plus PolicyKit elevation at the point of applying a profile
 - Kernel value readback and rollback attempts on failure; no system service restarts
-- Unit tests, CLI smoke tests, reproducible CMake builds, CircleCI gates and Debian packages
+- Unit tests, CLI smoke tests, CMake builds, CircleCI configuration and Debian packages
 
 **Caution:** Linux uses spare memory for useful caches; a low 'free RAM' count does not necessarily mean a problem. The app does not claim to create physical RAM or promise a universal speed boost. `zram`, `zswap`, `oomd`, clearing caches, disabling swap and changing overcommit are deliberately not automatic.
 
@@ -51,7 +76,7 @@ Install generated `.deb` with `sudo apt install ./memboost-pro-*.deb`. For other
 
 ## CI
 
-Per [CI provider policy](docs/CI_PROVIDER_POLICY.md), this repository uses **CircleCI exclusively** for automated checks. GitHub Actions is not used. Pushes and pull requests trigger the CircleCI build, test, virtual-display smoke test and packaging jobs if the CircleCI project is enrolled. Build artifacts are uploaded to CircleCI. Release publishing to GitHub requires separate verified release credentials and is not assumed to be configured.
+Per [CI provider policy](docs/CI_PROVIDER_POLICY.md), this repository uses **CircleCI exclusively** for automated checks. GitHub Actions is not used. Pushes and pull requests trigger the CircleCI build, test, virtual-display smoke test and packaging jobs if the CircleCI project is enrolled. Build artifacts are uploaded to CircleCI. On a version tag, an optional CircleCI publisher can create a GitHub Releases entry **only if** a protected `GITHUB_TOKEN` has been configured; neither token availability nor publisher execution is assumed. Packages are independently distributed through the versioned `downloads/` folder on the homepage.
 
 ## Security and non-goals
 

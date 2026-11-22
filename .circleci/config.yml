@@ -11,7 +11,7 @@ jobs:
           name: Install build and virtual-display dependencies
           command: |
             sudo apt-get update
-            sudo apt-get install -y g++ cmake libx11-dev xvfb xauth dpkg-dev
+            sudo apt-get install -y g++ cmake libx11-dev xvfb xauth dpkg-dev python3
       - run:
           name: Configure and build native C++ application
           command: |
@@ -33,11 +33,48 @@ jobs:
             cd build
             cpack -G DEB
             cpack -G TGZ
-            sha256sum memboost-pro-*.deb memboost-pro-*.tar.gz > SHA256SUMS.txt
+            mkdir -p ../dist
+            cp memboost-pro-*.deb memboost-pro-*.tar.gz ../dist/
+            cd ../dist
+            sha256sum *.deb *.tar.gz > SHA256SUMS.txt
+      - run:
+          name: Validate package payload and checksums
+          command: |
+            set -eu
+            cd dist
+            sha256sum -c SHA256SUMS.txt
+            dpkg-deb -I memboost-pro-*.deb
+            dpkg-deb -c memboost-pro-*.deb | grep -q 'usr/bin/memboost'
       - store_artifacts:
-          path: build
+          path: dist
           destination: release-build
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist
+  publish-github-release:
+    docker:
+      - image: cimg/python:3.12
+    resource_class: small
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Publish tested tag artifact to GitHub (requires GITHUB_TOKEN)
+          command: python3 scripts/publish_release.py
 workflows:
   verify-native-linux:
     jobs:
-      - build-test-package
+      - build-test-package:
+          filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
+      - publish-github-release:
+          requires:
+            - build-test-package
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
