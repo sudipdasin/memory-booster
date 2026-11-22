@@ -1,0 +1,24 @@
+# CircleCI-only initial project smoke gate. No application source yet.
+version: 2.1
+jobs:
+  scaffold-integrity:
+    docker:
+      - image: cimg/python:3.12
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Validate starting repository contents without secrets or release writes
+          command: |
+            set -eu
+            python - <<'PY'
+            from pathlib import Path
+            assert Path('README.md').is_file()
+            p=Path('docs/CI_PROVIDER_POLICY.md').read_text(encoding='utf-8')
+            assert 'CircleCI' in p and 'billing' in p
+            print('Scaffold integrity OK; no application tests are defined')
+            PY
+workflows:
+  scaffold-readonly:
+    jobs:
+      - scaffold-integrity
