@@ -24,6 +24,29 @@ int main(){
  {std::istringstream i("MemTotal: 1024 kB\nMemFree: 512 kB\nCached: 1000 kB\n");auto m=mb::parse_memory(i);assert(m.valid&&m.available==1024);}
  
 
+ {
+  auto c=mb::parse_cgroup("52428800\n","104857600\n","4096\n","max\n");
+  assert(c.available&&c.limited&&c.current_bytes==52428800&&c.limit_bytes==104857600);
+  assert(c.swap_available&&!c.swap_limited);
+  auto unlimited=mb::parse_cgroup("15","max","","max");
+  assert(unlimited.available&&!unlimited.limited&&!unlimited.swap_available);
+  auto invalid=mb::parse_cgroup("-1","100","0","100");assert(!invalid.available);
+  invalid=mb::parse_cgroup("18446744073709551616","100","0","100");assert(!invalid.available);
+ }
+ {
+  mb::Snapshot a;a.memory.valid=true;a.memory.total=1048576;a.memory.available=524288;
+  a.pressure.available=true;a.pressure.some10=30.0;
+  auto d=mb::diagnose(a);assert(d.level=="high"&&!d.findings.empty());
+  a.pressure.some10=12.0;d=mb::diagnose(a);assert(d.level=="elevated");
+  a.pressure.some10=1.0;d=mb::diagnose(a);assert(d.level=="normal");
+  a.pressure.available=false;a.cgroup.available=true;a.cgroup.limited=true;
+  a.cgroup.current_bytes=95;a.cgroup.limit_bytes=100;
+  d=mb::diagnose(a);assert(d.level=="high");
+  a.cgroup.current_bytes=85;d=mb::diagnose(a);assert(d.level=="elevated");
+  a.cgroup.current_bytes=40;d=mb::diagnose(a);assert(d.level=="normal");
+  assert(mb::diagnostic_report(a).find("Cgroup v2")!=std::string::npos);
+  a.memory.valid=false;d=mb::diagnose(a);assert(d.level=="unknown");
+ }
  char root_template[]="/tmp/memboost-test-XXXXXX";char* created=::mkdtemp(root_template);assert(created!=nullptr);auto root=fs::path(created);fs::create_directories(root/"sys/vm");
  auto sw=root/"sys/vm/swappiness",vf=root/"sys/vm/vfs_cache_pressure";
  {std::ofstream(sw)<<"60\n";std::ofstream(vf)<<"100\n";}
@@ -42,7 +65,8 @@ int main(){
  auto js=mb::json(mb::collect());assert(js.find("\"processes\"")!=std::string::npos);assert(js.find("\"ram_total_kib\"")!=std::string::npos);
  mb::Snapshot escaped;escaped.memory.total=1024;escaped.memory.available=512;escaped.memory.valid=true;
  escaped.processes.push_back({1,"foo\"\\bar\n",12});
- auto json=mb::json(escaped);assert(json.find("foo\\\"\\\\bar\\u000a")!=std::string::npos);
+ auto json=mb::json(escaped);assert(json.find("\"schema_version\":2")!=std::string::npos);
+ assert(json.find("\"diagnosis\"")!=std::string::npos);assert(json.find("foo\\\"\\\\bar\\u000a")!=std::string::npos);
 
  std::cout<<"MemBoost core tests passed\n";
 }

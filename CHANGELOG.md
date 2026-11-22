@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.0.0 — release candidate (2026-11-22)
+
+- Native Diagnosis GUI tab, safe PSI/cgroup v2 advice, v2 JSON and `--diagnose` / bounded `--watch` CLI.
+- Cgroup v2 namespace-aware sampling, quota and compressed swap visibility.
+- 15-test native X11 suite plus extended parser/cgroup/CLI error regression coverage.
+- Ubuntu 24.04 independent Linux VM install/uninstall testing in CircleCI; explicit release approval gate.
+- CODEOWNERS, review and license decision documents; no automatic relicensing or publication.
+
+# Changelog
+
 ## 1.0.0 — 2026-11-22
 - Supported-target stable baseline for Debian 13 (x86-64) native GUI and headless CLI. Additional distribution compatibility is not certified.
 - Add read-only installation self-test, 32-way concurrent JSON validation, GUI automation, and source-archive packaging controls.

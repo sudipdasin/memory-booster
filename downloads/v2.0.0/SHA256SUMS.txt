@@ -1,0 +1,3 @@
+55e55540860167a25442f4a31346f49aadb8b36fc7b70f8289ad78481e479675  MemBoost-Pro-2.0.0-linux-amd64.deb
+29c6ff3ddbdd6147bfbaf31d5e75eeb6044f5afecbb0565661340c4c74c3a3d6  MemBoost-Pro-2.0.0-linux-amd64.tar.gz
+a6f6cabe611de8ccc67092207997e4f6b8374ce42cceb450fb703c89d873b6d1  MemBoost-Pro-2.0.0-source.tar.gz
