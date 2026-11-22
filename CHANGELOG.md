@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.0.1 — owner-approved GPL community licensing (owner-review candidate)
+
+- Adopt the complete GNU GPL version 3 or later for the new Community release, including SPDX source notices, CPack metadata, installed license and the source/ZIP bundle.
+- Preserve historical MIT rights for prior releases through v3.0.0, and document contributor rights and risks of future proprietary derivatives.
+- Add offline license consistency regression, source/license integrity gates and public-launch review checklist, with CircleCI-only CI and independent Ubuntu machine VM verification retained.
+- Refresh v3.0.1 Debian, Linux tarball, source and complete ZIP artifacts and checksums; no historical files are overwritten.
+- Keep owner-controlled PR approval, branch protection and GitHub visibility as separate owner-only actions.
+
+
 ## 3.0.0 — Memory Sentinel telemetry (owner-review candidate)
 
 - Added native read-only `/proc/vmstat` parser for major page faults, swap-in/out pages, and optional host OOM kill counters.

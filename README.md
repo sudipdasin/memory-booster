@@ -1,72 +1,68 @@
-# MemBoost Pro — v3.0.0 review candidate
+# MemBoost Pro Community — v3.0.1 GPL public-readiness candidate
 
-**Native C++17 Linux memory diagnostics, cgroup-aware pressure analysis and cautious temporary tuning.** The official repository is governed by the owner; community changes must go through reviewed pull requests. This branch is a **candidate**, not a universally certified or public GitHub Release.
+**Native C++17 Linux memory diagnostics and conservative, confirmed tuning.** The owner has approved the **GNU General Public License version 3 or later** for this Community release. The official repository remains **private** until the owner completes GitHub review, merges the release candidate and explicitly changes visibility.
 
-## Download v3.0.0 candidate
+## License and public development
 
-| Artifact | GitHub versioned file |
+**License: [GPL-3.0-or-later](LICENSE)** · [Copyright and original MIT notices](COPYRIGHT.md) · [Preserved historical MIT notice](LICENSES/MIT-legacy.txt) · [Review governance](docs/RELEASE_GOVERNANCE.md)
+
+Anyone may use, modify and redistribute the Community code in compliance with GPL, including commercial redistribution. This does **not** authorize modifying the canonical repository without accepted pull requests. Owner review must be enabled in GitHub branch rules; CODEOWNERS alone is not enforcement.
+
+**Historical release note:** earlier artifacts through v3.0.0 remain available under their original MIT license grants. Changing this checkout's license does not retract previously granted MIT rights or relicense previous binaries retroactively.
+
+## Downloads: v3.0.1 Linux review candidate
+
+| File | GitHub versioned download |
 |---|---|
-| Debian 13 x86-64 installer | [Download `.deb`](downloads/v3.0.0/MemBoost-Pro-3.0.0-linux-amd64.deb?raw=1) |
-| Linux x86-64 archive | [Download `.tar.gz`](downloads/v3.0.0/MemBoost-Pro-3.0.0-linux-amd64.tar.gz?raw=1) |
-| Full source code | [Download source](downloads/v3.0.0/MemBoost-Pro-3.0.0-source.tar.gz?raw=1) |
-| Complete package ZIP | [Download ZIP](downloads/v3.0.0/MemBoost-Pro-3.0.0-download-bundle.zip?raw=1) |
-| Verification and notes | [SHA-256](downloads/v3.0.0/SHA256SUMS.txt) · [release notes](docs/releases/v3.0.0.md) |
+| Debian 13 x86-64 `.deb` | [Download Debian package](downloads/v3.0.1/MemBoost-Pro-3.0.1-linux-amd64.deb?raw=1) |
+| Linux x86-64 `.tar.gz` | [Download portable archive](downloads/v3.0.1/MemBoost-Pro-3.0.1-linux-amd64.tar.gz?raw=1) |
+| Complete GPL-covered C++ source | [Download source archive](downloads/v3.0.1/MemBoost-Pro-3.0.1-source.tar.gz?raw=1) |
+| DEB, Linux archive, source, GPL and checksum ZIP | [Download ZIP](downloads/v3.0.1/MemBoost-Pro-3.0.1-download-bundle.zip?raw=1) |
+| SHA-256 manifest | [Verify downloads](downloads/v3.0.1/SHA256SUMS.txt) |
 
-The GitHub repository is **private until the owner makes it public**, and links on a review branch require authorized GitHub access. Direct public downloads can only be verified after publication.
+These versioned files belong to the unmerged review branch, not `main` or official GitHub Releases. They require repository access until visibility becomes public. The `.deb` targets a tested Debian 13 x86-64 baseline; Ubuntu 24.04 is validated separately using a VM-built package. No universal Linux compatibility or native Windows `.exe` is claimed.
 
-```sh
-sudo apt install ./MemBoost-Pro-3.0.0-linux-amd64.deb
+```bash
+sudo apt install ./MemBoost-Pro-3.0.1-linux-amd64.deb
 memboost --self-test
 memboost --gui
 ```
 
-## Commands
+## Core features
 
-```sh
-memboost --status                       # real memory + cgroup stats
-memboost --json                         # machine-readable v3 schema
-memboost --diagnose                     # PSI + cgroup constraint analysis
-memboost --signals                      # cumulative paging, swap and OOM signals
-memboost --track --samples 5 --interval-ms 1000 --format jsonl > samples.jsonl
-memboost --watch --samples 5 --interval-ms 2000
-memboost --apply balanced --dry-run     # harmless preview
-# Only after reviewing implications, sudo/pkexec and --yes permit temporary tuning.
+- Seven native X11/XWayland GUI tabs: Overview, Processes, Diagnosis, Telemetry, Profiles, Setup guide, Activity.
+- Available RAM, swap, PSI memory pressure and zram, with cgroup v2 limits where available.
+- Read-only `/proc/vmstat`, OOM and paging event counters, bounded local telemetry sampling, JSONL output.
+- Confirmed, temporary kernel swappiness and VFS pressure profiles with readback verification and rollback on error.
+- No automatic cache drops, swap cycling, process killing, unsolicited privileged writes, cloud upload or background services.
+
+![Native seven-tab Linux MemBoost interface](assets/memboost-v3-dashboard.png)
+
+## Read-only CLI and diagnostics
+
+```bash
+memboost --status
+memboost --json
+memboost --diagnose
+memboost --signals
+memboost --track --samples 5 --interval-ms 1000 --format jsonl > sample.jsonl
+memboost --apply balanced --dry-run
 ```
 
-## Graphical application
+## Rebuild and verify the public source
 
-Seven native X11 tabs: Overview (RAM/swap history), Processes (read-only RSS), Diagnosis (PSI/cgroup), Telemetry (faults, swap, OOM-event counters and measured rates), Profiles (explicitly confirmed), Setup guide, and Activity. GUI runs as a normal user. An authorization dialog is used only for user-initiated kernel tuning; headless operations work on systems without X11.
-
-![Actual MemBoost native Linux dashboard](assets/memboost-v3-dashboard.png)
-
-## Memory Sentinel telemetry (new in 3.0)
-
-`--signals` reads cumulative Linux VM counters and cgroup v2 `memory.events`. **Cumulative values are not live rates** and can include activity before MemBoost started. `--track` measures intervals and emits plain text or one JSON record per sample (JSONL) for analysis. Counter resets, missing features, invalid parameters, and unavailable streams are handled conservatively; MemBoost does not claim that a rising major-fault rate means an application is faulty. JSON schema moved from 2 to **3** and now includes `vmstat` and `cgroup_events`.
-
-No background service, remote telemetry, process killing, data upload or automatic tuning. JSONL output is written only to stdout unless you choose to redirect it. Its process table can contain program names and PIDs; inspect exports before sharing.
-
-## Safety, scope and compatibility
-
-Linux intentionally uses unused RAM for helpful caches. More available RAM after cache clearing does not necessarily mean better performance, and this program doesn't clear caches automatically. No swap shutdown, zram manipulation, OOM daemon changes or systemd startup changes occur automatically. Profile operations only temporarily set kernel swappiness and VFS cache pressure, verify results and attempt rollback on failure.
-
-The `.deb` is a Debian 13 x86-64 release baseline, **not a universal Linux binary**. Ubuntu 24.04 is tested separately in CircleCI's VM job using its own compiled package. Source requires C++17/CMake 3.16+ (libX11 headers only for GUI). There is no Windows `.exe` because this is a Linux program; use the ZIP/TAR.GZ for portable distribution.
-
-## Build and test
-
-```sh
+```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DMEMBOOST_BUILD_GUI=ON
-cmake --build build --parallel
+cmake --build build --parallel 2
 ctest --test-dir build --output-on-failure
 python3 scripts/public_release_audit.py
 python3 scripts/make_release.py --build-dir build-release
 ```
 
-CircleCI is the **sole CI provider** under [the existing policy](docs/CI_PROVIDER_POLICY.md). Owner governance: [.github/CODEOWNERS](.github/CODEOWNERS), [review rules](docs/RELEASE_GOVERNANCE.md), [contributing](CONTRIBUTING.md), [security](SECURITY.md), [test guidance](docs/TESTING_GUIDE.md).
+Requires a C++17 compiler, CMake >=3.16 and optional X11 development headers for native GUI. CLI builds do not require a display server. No guaranteed operation on non-Linux kernels.
 
-## Upgrade sequence and owner approval
+## GitHub governance and public launch
 
-This v3.0.0 branch **builds on the unmerged v2.0.0 owner-review branch**. It is submitted as a separate stacked pull request against v2.0.0; merge v2 first and retarget v3 to `main` only after owner approval. Neither branch is automatically merged. CircleCI is the only hosted CI provider; no GitHub Actions are added.
+This change is stacked on **[v3 pull request #2](https://github.com/sudipdasin/memory-booster/pull/2)**, which in turn depends on **[v2 pull request #1](https://github.com/sudipdasin/memory-booster/pull/1)**. Do not merge or change repo visibility before owner-reviewed CI approval. Set active rulesets for `main` and `release/*`: require pull requests, code-owner reviews, up-to-date CircleCI checks and no undesired bypasses, force pushes or branch deletions. An author cannot approve their own PR; for solo maintainer reviews arrange an independent reviewer or an explicit owner-only governance exception. GitHub Actions is disabled; **CircleCI is the sole CI provider**.
 
-## License — owner's decision pending
-
-Current repository license: [MIT](LICENSE). For a public **copyleft** Community edition we recommend [GPL-3.0-or-later](docs/LICENSE_OPTIONS.md), but that change will not occur without the owner's explicit review. A license cannot require outside forks to obtain approval; branch protection and repo permissions control merges into the canonical project.
+See [public launch checklist](docs/PUBLIC_READINESS.md), [release instructions](docs/RELEASE_PUBLISHING.md), [contribution policy](CONTRIBUTING.md) and [security reporting](SECURITY.md).

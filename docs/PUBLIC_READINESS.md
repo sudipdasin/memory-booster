@@ -1,23 +1,31 @@
-# MemBoost Pro — public-release readiness
+# Public launch checklist — MemBoost Pro Community 3.0.1
 
-This checklist separates measurable engineering checks from decisions that require the repository owner.
+This checklist distinguishes implemented source/CI from actions requiring the owner. **Do not change repository visibility until the exact reviewed GPL-bearing changes are merged and confirmed on `main`.**
 
-- [x] Project source and versioned tests maintained in GitHub; exact v1.0.0 commit status must be verified after publishing.
-- [x] MIT LICENSE included. This permits source redistribution and commercial use; it cannot be unilaterally revoked from recipients of already licensed versions. Review this licensing choice before making the repository public.
-- [x] No credentials required for normal application functionality.
-- [x] Build is nonprivileged. App monitors memory without root; tuning requires explicit confirmation and administrator permissions.
-- [x] No background daemon, hidden services, forced swap cycling, or cache drops.
-- [x] Offline public release audit checks version and searches source for common credential forms.
-- [ ] Public downloads and release page verified by an unauthenticated browser (requires repo to be public).
-- [ ] Testing on independent Ubuntu, Fedora, Arch, openSUSE VMs, including older glibc baselines.
-- [ ] Installation, removal, window-manager integration and root-authorized profile write/rollback tested on a disposable VM.
-- [ ] Final GitHub Release with immutable tag and assets verified (requires GitHub Releases write path / CircleCI protected token).
-- [ ] Owner decides to change repository visibility from private to public; do not change automatically.
+## Engineering and licensing
 
-## Supported target
+- [x] Owner authorized **GPL-3.0-or-later** for the new Community release.
+- [x] Complete GNU GPL v3 license and copyright history included; original pre-v3.0.1 MIT grants are explicitly preserved.
+- [x] C++/Python SPDX notices and CMake package licensing metadata updated.
+- [x] Build system, read-only CLI, GUI, tests and CircleCI machine VM checks retained; no GitHub Actions.
+- [ ] Exact latest candidate build, sanitizer and Ubuntu VM jobs: confirm green on its final GitHub commit.
+- [ ] Source, checksums and DEB/TGZ/ZIP archive consistency: inspect the exact uploaded files.
+- [ ] **Provenance review:** confirm that all included source/artwork/third-party materials may be distributed under the applicable licenses. Automated scans cannot prove ownership.
+- [ ] Before public disclosure, check **entire repository history, branches and binary archives** for secrets/PII; working-tree pattern scanning alone cannot certify historical privacy.
 
-Currently tested for Debian GNU/Linux 13 x86-64, native X11 or XWayland. The C++17 source may compile on additional distributions. Dynamic native packages are not universal Linux binaries. The `.deb` built here targets newer glibc/libstdc++, and may not install on older systems.
+## Required owner-controlled GitHub configuration
 
-## Privacy guidance
+- [ ] Activate a GitHub ruleset covering `main` and release branches requiring pull requests, required CODEOWNERS approval, no force pushes/deletion, stale review dismissal, and required CircleCI status checks.
+- [ ] Configure or explicitly document the needed independent reviewer/solo-maintainer exception; PR authors cannot approve their own PRs.
+- [ ] Owner reviews and merges stacked PRs in dependency order: v2 PR #1, v3 PR #2, license+v3.0.1 PR #3.
+- [ ] Owner explicitly decides to change visibility **after** exact-release verification on `main`. Public becomes accessible to everyone, including historic branches and downloads.
+- [ ] Owner authorizes optional tagged GitHub Releases publication via a protected CircleCI context and manual approval; direct `downloads/v3.0.1/` is a verified fallback but not an official GitHub Release.
+- [ ] Once public, test unauthenticated GitHub ZIP/DEB/source downloads and SHA-256 checks.
 
-Do not post screenshots containing usernames, hostname, SSH details, private tokens or private process names. The command `memboost --json` includes top process names; sanitize them before attaching logs. Security reports should omit private system information.
+## Tested-system scope
+
+Debian 13 x86-64 local native GUI and CLI; Ubuntu 24.04 machine VM builds its own DEB during CI. Fedora, Arch, openSUSE, ARM and Wayland-only environments remain unverified. No Windows `.exe` is provided for this Linux-native tool.
+
+## Privacy reminder
+
+`memboost --json` and GUI process details may contain local application names and PIDs. Do not publish screenshots, logs or archives containing credentials, identifiers, hostnames or sensitive customer data.

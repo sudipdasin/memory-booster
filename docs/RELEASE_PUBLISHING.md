@@ -1,10 +1,10 @@
-# MemBoost Pro release publishing (CircleCI only)
+# GPL-3.0-or-later public release procedure (CircleCI only)
 
-1. Keep GitHub Actions disabled; CircleCI is the exclusive CI provider due to billing restrictions.
-2. Run the local and remote full CI verification jobs on the exact release commit, including `build-test-package` and `headless-sanitizers`. Both must pass.
-3. Review MIT LICENSE, bundled artwork, source archive, README, security/privacy checklist and Debian dependencies before public visibility is enabled. Changing the visibility is a separate, potentially irreversible exposure decision.
-4. If you want assets in GitHub's official **Releases** section, create a *restricted CircleCI context* named `memboost-release` with a protected `GITHUB_TOKEN` that is permitted to publish releases to this repository (fine-grained access: Contents read/write only). Configure CircleCI context security restrictions so forks, arbitrary contributors and untrusted tags cannot access this token. **Never commit tokens or paste them into public issues.**
-5. Create the exact version tag (e.g. `v1.0.0`) on the verified release commit. The tag-only `publish-github-release` CircleCI job depends on both verification jobs and rejects version mismatches, missing credentials and checksum failures. Do not create the tag before the protected context is ready; it will otherwise fail to publish. The publisher script never silently overwrites existing assets.
-6. Confirm public GitHub Releases assets and file hashes from an unauthenticated browser after making the repository public. This step cannot be verified while the repository is private.
+1. Review and approve the v2 PR, the v3 PR and the GPL v3.0.1 PR in that order. Require all three CircleCI jobs on the exact head commit: `ci/circleci: build-test-package`, `ci/circleci: headless-sanitizers`, `ci/circleci: ubuntu-2404-vm-install`.
+2. Enable enforceable GitHub rulesets before merging (`main`, `release/*`); explicitly deny unwanted admin bypasses, direct pushes, force pushes and deletion. An author may not approve their own PR. CODEOWNERS is not enforced without required code-owner reviews.
+3. Verify LICENSE (GPL version 3 full text), COPYRIGHT.md, SPDX notices, source/build reproducibility and current GPL-bearing archives. Retain prior MIT artifacts and notices without relabeling them. Check all branches, history and included images/assets for any private information before exposing.
+4. Merge owner-approved PRs, validate the final version and checksums on `main`, and run CircleCI on the exact merged commit. **Only then** change GitHub repository visibility to public.
+5. Verify anonymous downloads under `downloads/v3.0.1/` from a logged-out session; this is repository-hosted distribution, **not** an official GitHub Releases entry.
+6. Optional official GitHub Release: configure a narrowly restricted CircleCI `memboost-release` context with a scoped GitHub token (Contents write only), confirm authorization and manual hold, create tag `v3.0.1` on the verified final commit, approve `hold-release`, then confirm the attached GitHub Release assets. Never commit a token or put it in a PR comment.
 
-**Fallback:** Versioned checksummed `downloads/v1.0.0/` are already included in the repository and linked in the main README. They will be available to everyone when the repository owner deliberately switches visibility to public, even if official GitHub Releases attachment is not set up. This fallback does not create an official release or provide cryptographic signature verification.
+A GPL program may be distributed commercially; independent forks do not require permission to publish, but the official repository requires owner review for merges and official releases.

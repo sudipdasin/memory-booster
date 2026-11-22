@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 MemBoost Pro contributors
 """Publish CI-verified release files using CircleCI, never GitHub Actions.
 
 Requires an explicit tag on the tested commit, credentials in a protected

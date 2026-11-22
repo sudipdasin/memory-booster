@@ -1,11 +1,11 @@
-# Pending owner license decision for v2.x
+# License decision — owner approved GPL-3.0-or-later (v3.0.1)
 
-**Current repository license: MIT.** This document is advisory; adding it does not change the license on existing files or packages.
+The owner approved the recommended **GNU General Public License version 3 or any later version** for the Community edition. The source and new versioned distribution beginning with **v3.0.1** identify as `GPL-3.0-or-later` and include the complete GPLv3 text in root `LICENSE`. The packages and source archive must include that license and the `COPYRIGHT.md` provenance notice.
 
-**Recommended for a permanently free and open-source Community edition: GPL-3.0-or-later.** It requires distribution of corresponding source for distributed derivative versions under its copyleft terms. GPL still permits commercial activity and independent forks; it does not let the owner vet other people's outside projects or forks. For the owner's public canonical GitHub repository, merge permission is controlled by rulesets, CODEOWNERS and human reviews — never by the software license.
+**Historical MIT:** earlier versioned binaries/source archives through v3.0.0 were originally distributed with MIT terms and remain under those grants. The repository history and older releases are not retroactively rewritten. When incorporating MIT-origin work in the GPL-covered version, preserve applicable notices including the full text in `LICENSES/MIT-legacy.txt`.
 
-MIT is a valid OSI-approved open-source license, but allows closed-source redistribution in ways GPLv3 does not. Only the copyright holder(s) can authorize a license change; ensure all third-party additions are appropriately licensed. Copies previously distributed under MIT remain covered by those grants.
+**Canonical repo vs forks:** GPL does not impose prior approvals on outside forks; it grants recipients permission to use, modify and redistribute the software on GPL terms. GitHub branch protection and CODEOWNERS control contributions to the official repository. New contributors must have rights to submit GPL-compatible changes. Do not treat source-code publicity as licensing rights for third-party material not owned by contributors.
 
-Do not relicense automatically. The owner must approve the new LICENSE and source headers explicitly before publishing a GPL-licensed edition. If proprietary modules may exist later, maintain a separate private repository and obtain professional legal advice on linking, sublicensing, copyright ownership and GPL compliance. GPL is not a noncommercial restriction.
+**Private Pro:** keep distinct proprietary code and assets private, but review GPL linking/derivative-work obligations, contributor rights and potential incompatibilities before a proprietary product is shipped. This Community code is not licensed 'noncommercial only'.
 
-See GNU GPL FAQ: https://www.gnu.org/licenses/gpl-faq.html and GitHub protected branches: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches
+Authoritative references: https://www.gnu.org/licenses/gpl-howto.html and https://spdx.org/licenses/GPL-3.0-or-later.html

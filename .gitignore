@@ -19,3 +19,7 @@ __pycache__/
 !downloads/v1.0.0/*.deb
 !downloads/v1.0.0/*.tar.gz
 !downloads/v1.0.0/*.zip
+!downloads/v3.0.1/
+!downloads/v3.0.1/*.deb
+!downloads/v3.0.1/*.tar.gz
+!downloads/v3.0.1/*.zip

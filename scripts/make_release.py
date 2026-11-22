@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 MemBoost Pro contributors
 """Create reproducible source archive and locally tested Linux release bundle.
 
 This script does not push, tag, publish, alter permissions or change kernel state.
@@ -14,7 +16,7 @@ import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
 SOURCE_FILES=['.github/CODEOWNERS','.circleci/config.yml','.gitignore','CHANGELOG.md','CMakeLists.txt',
-              'LICENSE','README.md','VERSION','SECURITY.md','CONTRIBUTING.md']
+              'LICENSE','COPYRIGHT.md','LICENSES/MIT-legacy.txt','.github/PULL_REQUEST_TEMPLATE.md','README.md','VERSION','SECURITY.md','CONTRIBUTING.md']
 SOURCE_DIRS=['src','tests','packaging','scripts','docs','assets']
 
 def run(*args):
@@ -81,7 +83,7 @@ def main():
     (dest/'RELEASE-NOTES.md').write_bytes(notes.read_bytes())
     bundle=dest/f'{base}-download-bundle.zip'
     with zipfile.ZipFile(bundle,'w') as z:
-        for f in products+[dest/'SHA256SUMS.txt',dest/'RELEASE-NOTES.md',ROOT/'LICENSE']:
+        for f in products+[dest/'SHA256SUMS.txt',dest/'RELEASE-NOTES.md',ROOT/'LICENSE',ROOT/'COPYRIGHT.md',ROOT/'LICENSES/MIT-legacy.txt']:
             add_zip(z,f)
     print('Release bundle completed:',dest)
     for f in products+[bundle]:print(f.name,f.stat().st_size,'bytes SHA256',digest(f))
