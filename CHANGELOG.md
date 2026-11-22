@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.0.0 — Memory Sentinel telemetry (owner-review candidate)
+
+- Added native read-only `/proc/vmstat` parser for major page faults, swap-in/out pages, and optional host OOM kill counters.
+- Added cgroup v2 `memory.events` counters and safe before/after delta calculation with reset detection and missing-feature handling.
+- Added `memboost --signals` and bounded `memboost --track` with structured JSONL output; no network transmission or filesystem writes by default.
+- Expanded native Linux X11 GUI from six to seven tabs; Telemetry tab distinguishes cumulative values from per-interval rates.
+- Bumped machine-readable snapshot JSON schema to 3; maintained conservative no-automatic-tuning policy.
+- Added malformed/overflow parser fixtures, counter reset and timing tests, 7-tab GUI functional test, JSONL integration and VM install gate.
+- Preserved existing owner-review branch and manual CircleCI release approval controls; current MIT license unchanged pending explicit owner selection.
+
+# Changelog
+
 ## v2.0.0 — release candidate (2026-11-22)
 
 - Native Diagnosis GUI tab, safe PSI/cgroup v2 advice, v2 JSON and `--diagnose` / bounded `--watch` CLI.

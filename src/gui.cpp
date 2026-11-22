@@ -20,6 +20,8 @@ struct App {
  int width=W,height=H,tab=0,profile=0;bool confirming=false;pid_t child=-1;
  std::string message="Read-only monitoring active. System settings are unchanged.";
  mb::Snapshot snap;std::deque<double> history;
+ mb::TelemetryDelta last_delta;bool have_sample=false;
+ std::chrono::steady_clock::time_point last_sample_time;
  unsigned long color(const char* name){XColor c,e;if(XAllocNamedColor(d,DefaultColormap(d,DefaultScreen(d)),name,&c,&e))return c.pixel;return BlackPixel(d,DefaultScreen(d));}
  void fill(int x,int y,int ww,int hh,unsigned long c){XSetForeground(d,gc,c);XFillRectangle(d,w,gc,x,y,std::max(0,ww),std::max(0,hh));}
  void outline(int x,int y,int ww,int hh,unsigned long c){XSetForeground(d,gc,c);XDrawRectangle(d,w,gc,x,y,std::max(0,ww-1),std::max(0,hh-1));}
@@ -30,9 +32,9 @@ struct App {
  static std::string gib(uint64_t kb){char b[40];std::snprintf(b,sizeof(b),"%.2f GiB",kb/1048576.0);return b;}
  void gauge(int x,int y,int ww,int hh,double share,unsigned long c){fill(x,y,ww,hh,side);fill(x,y,static_cast<int>(ww*std::clamp(share,0.0,1.0)),hh,c);}
  void tabs(){fill(0,0,width,84,side);label(32,34,"MEMBOOST  PRO",teal);label(32,59,"Native Linux memory diagnostics",muted);
-  const char* labels[]={"Overview","Processes","Diagnosis","Profiles","Setup guide","Activity"};
-  const int origin=303, step=(width-origin-16)/6;
-  for(int i=0;i<6;i++)button(origin+i*step,22,step-7,40,labels[i],tab==i);
+  const char* labels[]={"Overview","Processes","Diagnosis","Telemetry","Profiles","Guide","Activity"};
+  const int origin=265, step=(width-origin-16)/7;
+  for(int i=0;i<7;i++)button(origin+i*step,22,step-7,40,labels[i],tab==i);
  }
  void overview(){auto& m=snap.memory;int half=(width-76)/2;
  box(26,104,half,172,"PHYSICAL MEMORY");box(50+half,104,half,172,"SWAP");
@@ -67,6 +69,21 @@ struct App {
   for(const auto& a:d.advice){label(50,y,a.substr(0,108),muted);y+=33;if(y>605)break;}
   label(50,628,"Do not tune solely on percentage used: Linux caches free memory when needed.",amber);
  }
+ void telemetry(){
+  box(26,104,width-52,553,"LIVE TELEMETRY  /  COUNTERS & MEASURED DELTAS");
+  label(50,157,"Host major faults: "+(snap.vmstat.available?std::to_string(snap.vmstat.major_faults):"unavailable"),text);
+  label(50,194,"Swap-in pages: "+(snap.vmstat.available?std::to_string(snap.vmstat.swap_in):"unavailable"),muted);
+  label(50,231,"Swap-out pages: "+(snap.vmstat.available?std::to_string(snap.vmstat.swap_out):"unavailable"),muted);
+  label(50,268,"Host OOM kills since boot: "+(snap.vmstat.oom_available?std::to_string(snap.vmstat.oom_kills):"unavailable"),muted);
+  label(50,326,"Cgroup memory.high events: "+(snap.cgroup_events.available?std::to_string(snap.cgroup_events.high):"unavailable"),text);
+  label(50,363,"Cgroup OOM kills: "+(snap.cgroup_events.available?std::to_string(snap.cgroup_events.oom_kill):"unavailable"),muted);
+  const auto rate=[](uint64_t n,double sec){char b[40];std::snprintf(b,sizeof(b),"%.2f",sec>0?n/sec:0.0);return std::string(b);};
+  label(50,433,last_delta.vm_available?"Recent major faults/s: "+rate(last_delta.major_faults,last_delta.seconds):"Waiting for valid interval (or vmstat unavailable)",teal);
+  label(50,467,last_delta.vm_available?"Recent swap-out pages/s: "+rate(last_delta.swap_out,last_delta.seconds):"Cumulative counters are not rates",teal);
+  label(50,502,last_delta.cgroup_available?"Recent cgroup OOM kills: "+std::to_string(last_delta.cgroup_oom_kill):"Cgroup events unavailable or first sample",last_delta.cgroup_oom_kill>0?red:muted);
+  if(last_delta.reset_detected)label(50,553,"Counter reset: suppressing the affected interval",amber);
+  label(50,617,"To capture structured telemetry: memboost --track --format jsonl --samples 5",muted);
+ }
  void profiles(){box(26,104,width-52,420,"SELECT A REVERSIBLE, TEMPORARY TUNING PROFILE");
  auto ps=mb::profiles();for(int i=0;i<3;i++){int y=160+i*91;fill(48,y,width-96,78,i==profile?side:card);outline(48,y,width-96,78,i==profile?teal:border);label(73,y+29,ps[i].name+"     swappiness="+std::to_string(ps[i].swappiness)+"  vfs_cache_pressure="+std::to_string(ps[i].vfs_cache_pressure),text);label(73,y+56,ps[i].explanation,muted);}
  button(48,453,270,48,"Apply selected profile",true);label(337,473,"Requires administrator authorization; confirmation follows.",muted);
@@ -90,10 +107,13 @@ struct App {
  label(width/2-293,height/2-30,"Apply profile: "+p.name+"?",text);label(width/2-293,height/2+2,"Only swappiness and vfs_cache_pressure will change.",muted);
  button(width/2-280,height/2+40,200,44,"Cancel");button(width/2+50,height/2+40,230,44,"Apply (polkit)",true);
  }
- void draw(){fill(0,0,width,height,bg);tabs();if(tab==0)overview();else if(tab==1)processes();else if(tab==2)diagnosis();else if(tab==3)profiles();else if(tab==4)guide();else activity();
+ void draw(){fill(0,0,width,height,bg);tabs();if(tab==0)overview();else if(tab==1)processes();else if(tab==2)diagnosis();else if(tab==3)telemetry();else if(tab==4)profiles();else if(tab==5)guide();else activity();
  fill(0,height-43,width,43,side);label(27,height-17,child>0?"Authorization / tuning in progress...":message.substr(0,115),child>0?amber:muted);if(confirming)modal();XFlush(d);
  }
- void sample(){snap=mb::collect();double share=snap.memory.total?double(snap.memory.total-snap.memory.available)/snap.memory.total:0;history.push_back(share);if(history.size()>120)history.pop_front();}
+ void sample(){auto now=std::chrono::steady_clock::now();auto next=mb::collect();
+  if(have_sample)last_delta=mb::telemetry_delta(snap,next,std::chrono::duration<double>(now-last_sample_time).count());
+  snap=std::move(next);last_sample_time=now;have_sample=true;
+  double share=snap.memory.total?double(snap.memory.total-snap.memory.available)/snap.memory.total:0;history.push_back(share);if(history.size()>120)history.pop_front();}
  void apply(){if(child>0){message="An action is already in progress.";return;}auto p=mb::profiles()[profile];
  if(geteuid()==0){auto r=mb::apply_profile(p);message=r.message;sample();return;}
  pid_t pid=fork();if(pid<0){message="Could not create authorization process";return;}
@@ -101,9 +121,9 @@ struct App {
  child=pid;message="Waiting for administrator authorization...";
  }
  void click(int x,int y){if(confirming){if(y>=height/2+40&&y<height/2+84){if(x>=width/2-280&&x<width/2-80)confirming=false;else if(x>=width/2+50&&x<width/2+280){confirming=false;apply();}}return;}
- if(y>=22&&y<=62){const int origin=303,step=(width-origin-16)/6;
-  for(int i=0;i<6;i++)if(x>=origin+i*step&&x<origin+i*step+step-7){tab=i;return;}}
- if(tab==3){for(int i=0;i<3;i++)if(x>=48&&x<width-48&&y>=160+i*91&&y<238+i*91){profile=i;return;}
+ if(y>=22&&y<=62){const int origin=265,step=(width-origin-16)/7;
+  for(int i=0;i<7;i++)if(x>=origin+i*step&&x<origin+i*step+step-7){tab=i;return;}}
+ if(tab==4){for(int i=0;i<3;i++)if(x>=48&&x<width-48&&y>=160+i*91&&y<238+i*91){profile=i;return;}
   if(x>=48&&x<=318&&y>=453&&y<501){confirming=true;return;}}
  }
  int run(){d=XOpenDisplay(nullptr);if(!d){std::cerr<<"Cannot open X11 display. Use memboost --status for headless mode.\n";return 3;}

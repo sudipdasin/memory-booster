@@ -91,9 +91,11 @@ jobs:
             ctest --test-dir build-vm --output-on-failure
             (cd build-vm && cpack -G DEB)
             sudo apt-get install -y ./build-vm/memboost-pro-*.deb
-            /usr/bin/memboost --version | grep -F '2.0.0'
+            /usr/bin/memboost --version | grep -F '3.0.0'
             /usr/bin/memboost --self-test
             /usr/bin/memboost --diagnose
+            /usr/bin/memboost --signals
+            /usr/bin/memboost --track --samples 2 --interval-ms 200 --format jsonl | python3 -c "import json,sys; lines=[json.loads(x) for x in sys.stdin]; assert len(lines)==2 and all(x['telemetry_schema']==1 for x in lines)"
             /usr/bin/memboost --watch --samples 2 --interval-ms 200
             /usr/bin/memboost --json | python3 -m json.tool > /dev/null
             set +e

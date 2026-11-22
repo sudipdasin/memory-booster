@@ -11,13 +11,39 @@
 #ifdef MEMBOOST_WITH_X11
 int gui_main(int argc,char** argv);
 #endif
-static void usage(){std::cout<<"MemBoost Pro v" MEMBOOST_VERSION "\nUsage: memboost [--status|--json|--diagnose|--recommend|--self-test|--gui]\n       memboost --watch [--samples 1..60] [--interval-ms 200..60000]\n       memboost --apply balanced|responsive|compressed-swap --dry-run\n       pkexec memboost --apply PROFILE --yes\n\nNo system changes occur without --apply PROFILE --yes and root privileges.\n";}
+static void usage(){std::cout<<"MemBoost Pro v" MEMBOOST_VERSION "\nUsage: memboost [--status|--json|--diagnose|--signals|--recommend|--self-test|--gui]\n       memboost --watch [--samples 1..60] [--interval-ms 200..60000]\n       memboost --track [--samples 2..60] [--interval-ms 200..60000] [--format text|jsonl]\n       memboost --apply balanced|responsive|compressed-swap --dry-run\n       pkexec memboost --apply PROFILE --yes\n\nNo system changes occur without --apply PROFILE --yes and root privileges.\n";}
 int main(int argc,char** argv){
  std::string command=argc>1?argv[1]:"--gui";
- if((command!="--apply" && command!="--watch" && argc>2) || (command=="--apply" && argc>7)){std::cerr<<"Unexpected extra arguments\n";return 2;}
+ if((command!="--apply" && command!="--watch" && command!="--track" && argc>2) || (command=="--apply" && argc>7)){std::cerr<<"Unexpected extra arguments\n";return 2;}
  if(command=="--version"){std::cout<<"MemBoost Pro " MEMBOOST_VERSION "\n";return 0;}
  if(command=="--help"||command=="-h"){usage();return 0;}
  if(command=="--status"||command=="--json"){auto s=mb::collect();if(command=="--json")std::cout<<mb::json(s)<<"\n";else std::cout<<mb::report(s);return s.memory.valid?0:2;}
+ if(command=="--signals"){
+  auto s=mb::collect();std::cout<<mb::signals_report(s,{});return s.memory.valid?0:2;
+ }
+ if(command=="--track"){
+  int samples=5,interval=2000;std::string format="text";
+  if((argc-2)%2!=0){std::cerr<<"Track options require values\n";return 2;}
+  for(int i=2;i<argc;i+=2){
+   std::string key=argv[i],v=argv[i+1];
+   if(key=="--format"){if(v!="jsonl"&&v!="text"){std::cerr<<"Invalid track format\n";return 2;}format=v;continue;}
+   if(key!="--samples"&&key!="--interval-ms"){std::cerr<<"Unknown track option\n";return 2;}
+   if(v.empty()||v.find_first_not_of("0123456789")!=std::string::npos||v.size()>5){std::cerr<<"Invalid track number\n";return 2;}
+   const int parsed=std::stoi(v);if(key=="--samples")samples=parsed;else interval=parsed;
+  }
+  if(samples<2||samples>60||interval<200||interval>60000){std::cerr<<"Track settings outside safe limits\n";return 2;}
+  mb::Snapshot previous;auto prev_time=std::chrono::steady_clock::now();
+  for(int i=0;i<samples;i++){
+   if(i>0)std::this_thread::sleep_for(std::chrono::milliseconds(interval));
+   auto now=std::chrono::steady_clock::now();auto next=mb::collect();
+   if(!next.memory.valid){std::cerr<<"Memory counters unavailable\n";return 2;}
+   mb::TelemetryDelta d;
+   if(i>0)d=mb::telemetry_delta(previous,next,std::chrono::duration<double>(now-prev_time).count());
+   if(format=="jsonl")std::cout<<mb::telemetry_json(next,d,static_cast<unsigned>(i+1))<<"\n";
+   else std::cout<<"Sample "<<(i+1)<<"/"<<samples<<"\n"<<mb::signals_report(next,d);
+   std::cout<<std::flush;previous=std::move(next);prev_time=now;
+  }return 0;
+ }
  if(command=="--diagnose"){
   auto s=mb::collect();std::cout<<mb::diagnostic_report(s);return s.memory.valid?0:2;
  }
