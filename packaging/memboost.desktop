@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=MemBoost Pro
+GenericName=Linux Memory Optimizer
+Comment=Inspect memory, swap, zram and pressure safely
+Exec=memboost --gui
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Monitor;
+Keywords=RAM;Memory;Swap;zram;
+StartupNotify=true

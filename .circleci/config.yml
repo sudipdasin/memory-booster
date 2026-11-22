@@ -1,24 +1,43 @@
-# CircleCI-only initial project smoke gate. No application source yet.
+# CircleCI is the repository's exclusive CI provider. See docs/CI_PROVIDER_POLICY.md.
 version: 2.1
 jobs:
-  scaffold-integrity:
+  build-test-package:
     docker:
-      - image: cimg/python:3.12
-    resource_class: small
+      - image: cimg/base:stable
+    resource_class: medium
     steps:
       - checkout
       - run:
-          name: Validate starting repository contents without secrets or release writes
+          name: Install build and virtual-display dependencies
           command: |
-            set -eu
-            python - <<'PY'
-            from pathlib import Path
-            assert Path('README.md').is_file()
-            p=Path('docs/CI_PROVIDER_POLICY.md').read_text(encoding='utf-8')
-            assert 'CircleCI' in p and 'billing' in p
-            print('Scaffold integrity OK; no application tests are defined')
-            PY
+            sudo apt-get update
+            sudo apt-get install -y g++ cmake libx11-dev xvfb xauth dpkg-dev
+      - run:
+          name: Configure and build native C++ application
+          command: |
+            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DMEMBOOST_BUILD_GUI=ON
+            cmake --build build --parallel 2
+      - run:
+          name: Run deterministic unit and CLI checks
+          command: ctest --test-dir build --output-on-failure
+      - run:
+          name: Smoke test live GUI in virtual X11 display
+          command: |
+            set +e
+            xvfb-run -a timeout 4s ./build/memboost --gui
+            rc=$?
+            if [ "$rc" -ne 124 ]; then echo "GUI failed or quit unexpectedly: $rc"; exit 1; fi
+      - run:
+          name: Build Debian and portable archive artifacts
+          command: |
+            cd build
+            cpack -G DEB
+            cpack -G TGZ
+            sha256sum memboost-pro-*.deb memboost-pro-*.tar.gz > SHA256SUMS.txt
+      - store_artifacts:
+          path: build
+          destination: release-build
 workflows:
-  scaffold-readonly:
+  verify-native-linux:
     jobs:
-      - scaffold-integrity
+      - build-test-package
