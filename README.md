@@ -1,6 +1,6 @@
-# MemBoost Pro Community — v3.0.1 GPL public-readiness candidate
+# MemBoost Pro Community — v3.0.1
 
-**Native C++17 Linux memory diagnostics and conservative, confirmed tuning.** The owner has approved the **GNU General Public License version 3 or later** for this Community release. The official repository remains **private** until the owner completes GitHub review, merges the release candidate and explicitly changes visibility.
+**Native C++17 Linux memory diagnostics and conservative, confirmed tuning.** The owner has approved the **GNU General Public License version 3 or later** for this Community release. The GPL-bearing v3.0.1 release has been merged into the official `main` branch. **The owner controls public visibility.** Until the repository is made public, downloads require GitHub access.
 
 ## License and public development
 
@@ -10,7 +10,7 @@ Anyone may use, modify and redistribute the Community code in compliance with GP
 
 **Historical release note:** earlier artifacts through v3.0.0 remain available under their original MIT license grants. Changing this checkout's license does not retract previously granted MIT rights or relicense previous binaries retroactively.
 
-## Downloads: v3.0.1 Linux review candidate
+## Download MemBoost Pro Community v3.0.1 for Linux
 
 | File | GitHub versioned download |
 |---|---|
@@ -20,7 +20,7 @@ Anyone may use, modify and redistribute the Community code in compliance with GP
 | DEB, Linux archive, source, GPL and checksum ZIP | [Download ZIP](downloads/v3.0.1/MemBoost-Pro-3.0.1-download-bundle.zip?raw=1) |
 | SHA-256 manifest | [Verify downloads](downloads/v3.0.1/SHA256SUMS.txt) |
 
-These versioned files belong to the unmerged review branch, not `main` or official GitHub Releases. They require repository access until visibility becomes public. The `.deb` targets a tested Debian 13 x86-64 baseline; Ubuntu 24.04 is validated separately using a VM-built package. No universal Linux compatibility or native Windows `.exe` is claimed.
+These exact versioned files are committed to `main` as repository-hosted downloads. They are **not yet attached to a formal GitHub Releases entry**. Once visibility is public, verify anonymous downloads and SHA-256 checksums. The `.deb` targets a tested Debian 13 x86-64 baseline; Ubuntu 24.04 is validated separately using a VM-built package. No universal Linux compatibility or native Windows `.exe` is claimed.
 
 ```bash
 sudo apt install ./MemBoost-Pro-3.0.1-linux-amd64.deb
@@ -63,6 +63,8 @@ Requires a C++17 compiler, CMake >=3.16 and optional X11 development headers for
 
 ## GitHub governance and public launch
 
-This change is stacked on **[v3 pull request #2](https://github.com/sudipdasin/memory-booster/pull/2)**, which in turn depends on **[v2 pull request #1](https://github.com/sudipdasin/memory-booster/pull/1)**. Do not merge or change repo visibility before owner-reviewed CI approval. Set active rulesets for `main` and `release/*`: require pull requests, code-owner reviews, up-to-date CircleCI checks and no undesired bypasses, force pushes or branch deletions. An author cannot approve their own PR; for solo maintainer reviews arrange an independent reviewer or an explicit owner-only governance exception. GitHub Actions is disabled; **CircleCI is the sole CI provider**.
+The owner-authorized [v2 PR #1](https://github.com/sudipdasin/memory-booster/pull/1), [v3 PR #2](https://github.com/sudipdasin/memory-booster/pull/2), and [GPL v3.0.1 PR #3](https://github.com/sudipdasin/memory-booster/pull/3) have **all merged into main**. Future contributions to the canonical repository must go through owner-approved pull requests. GPL permits forks; it does not give contributors direct write access.
+
+**Owner action before public launch:** Enable an active GitHub ruleset for `main` and `release/*` requiring pull requests, approved reviews, all three CircleCI jobs, and preventing direct pushes, force pushes, branch deletion and unattended merges. Check old Git history, branches and binary archives for sensitive material and confirm third-party licensing. CODEOWNERS by itself does **not** enforce approval. CircleCI remains the exclusive CI provider; GitHub Actions is not used.
 
 See [public launch checklist](docs/PUBLIC_READINESS.md), [release instructions](docs/RELEASE_PUBLISHING.md), [contribution policy](CONTRIBUTING.md) and [security reporting](SECURITY.md).

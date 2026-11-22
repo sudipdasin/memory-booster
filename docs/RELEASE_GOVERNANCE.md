@@ -15,7 +15,7 @@ Use `Settings → Rules → Rulesets` to create active branch rules for `main` a
 
 ## Merging order
 
-v2 owner-review PR #1 → v3 Memory Sentinel PR #2 → GPL Community v3.0.1 PR #3. After each merge, verify that subsequent PR is correctly targeted to `main` and the final diff includes only the intended changes. Every merge requires your explicit authorization. Nothing in this source document configures GitHub settings by itself.
+Historical public-launch PRs #1 (v2), #2 (v3) and #3 (GPL v3.0.1) were merged into `main` under the owner's final release-preparation authorization. For **all future development**, require separate owner approval for each PR before merging. This policy document does **not** itself configure GitHub settings.
 
 ## Public launch gate
 
