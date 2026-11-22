@@ -1,8 +1,10 @@
-# Contributing to MemBoost Pro
+# Contributing — MemBoost Pro Community
 
-Contributions are welcome through **pull requests only**. The official `main` and release branches are intended to be protected, and the repository owner (`@sudipdasin`) must review external changes before merge. Do not push directly to `main`, and do not publish a public release on the project's behalf without the owner's authorization. See [review controls](docs/RELEASE_GOVERNANCE.md) and [.github/CODEOWNERS](.github/CODEOWNERS).
+Thank you for helping improve this Linux memory diagnostics project. **GPL-3.0-or-later** applies to new Community contributions accepted into the project. By submitting a PR, contributors represent that they may contribute the code under this license while retaining copyright over their own work. Do not include copyrighted material you cannot sublicense or material incompatible with GPL-3.0-or-later.
 
-Include unit or CLI regression tests for changes, use CircleCI rather than GitHub Actions, and maintain nonprivileged default behavior. Reproduce bugs with MemBoost version, distribution/kernel, X11/XWayland/headless session, sanitized output, and clear reproduction steps. Avoid posting API keys, usernames, network topology or unredacted process names.
+All contributions to the canonical repository must be made as pull requests and reviewed by the owner **@sudipdasin** under activated GitHub branch rulesets. Approval is not required to create or develop independent GPL-compliant forks; it is required for changes merged into this official repository. CODEOWNERS is advisory until an administrator enables required code-owner reviews.
+
+Include tests, reproductions and sanitized logs for bugs; avoid private keys, user names, customer information and process names in posted diagnostics. Use CircleCI exclusively, not GitHub Actions. Privileged changes must remain opt-in, reversible and tested on disposable Linux VMs before proposal.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -11,4 +13,4 @@ ctest --test-dir build --output-on-failure
 python3 scripts/public_release_audit.py
 ```
 
-Licensing is currently MIT; a GPL-3.0-or-later proposal is documented but requires the owner's express agreement. Third-party contributors should not make unilateral licensing changes.
+The repository owner reserves final authority over merges and official release publication, not over legally compliant independent redistribution. Previously distributed MIT versions retain their historic notices. See [copyright policy](COPYRIGHT.md).

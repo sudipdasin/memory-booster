@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 MemBoost Pro contributors
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <chrono>

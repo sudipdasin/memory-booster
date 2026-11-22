@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 MemBoost Pro contributors
 """Offline public-exposure audit for the exact repository checkout; never uploads files."""
 import argparse
 import hashlib
@@ -31,6 +33,16 @@ def main():
     assert re.fullmatch(r'\d+\.\d+\.\d+',version), 'invalid release version'
     assert f'project(MemBoostPro VERSION {version} ' in cmake, 'version mismatch'
     assert (ROOT/'LICENSE').is_file(), 'source publication requires an explicit license'
+    text=(ROOT/'LICENSE').read_text(encoding='utf-8')
+    assert len(text)>34000 and 'GNU GENERAL PUBLIC LICENSE' in text and 'END OF TERMS AND CONDITIONS' in text, 'incomplete GNU GPL-3 license'
+    assert 'GPL-3.0-or-later' in cmake, 'package license mismatch'
+    assert (ROOT/'COPYRIGHT.md').is_file(), 'copyright/provenance notices missing'
+    legacy=(ROOT/'LICENSES/MIT-legacy.txt')
+    assert legacy.is_file() and 'MIT License' in legacy.read_text() and 'Copyright (c) 2026 MemBoost Pro contributors' in legacy.read_text(), 'historical MIT notice missing'
+    for directory in ('src','tests','scripts'):
+        for f in (ROOT/directory).rglob('*'):
+            if f.is_file() and f.suffix in ('.cpp','.hpp','.py'):
+                assert 'SPDX-License-Identifier: GPL-3.0-or-later' in f.read_text(encoding='utf-8')[:250], f'missing SPDX notice in {f}'
     assert (ROOT/'.circleci/config.yml').is_file(), 'CircleCI policy missing'
     assert not (ROOT/'.github/workflows').exists(), 'GitHub Actions forbidden by CI policy'
     candidates=[]
@@ -60,7 +72,7 @@ def main():
             names.append(name)
         assert any(n.endswith('.deb') for n in names) and any(n.endswith('.tar.gz') for n in names)
         for n in names:assert version in n,'package version is stale: '+n
-    print(f'Public-release audit passed for version {version}; no credential patterns in source files')
+    print(f'Public-release audit passed for GPL-3.0-or-later version {version}; source and license scanned')
 
 if __name__=='__main__':
     try:main()

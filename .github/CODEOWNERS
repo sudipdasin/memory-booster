@@ -1,3 +1,2 @@
-# Proposed governance for public community contributions.
-# GitHub only enforces this file when branch protection requires code-owner reviews.
+# Canonical repository review owner. Enforce through GitHub rulesets; CODEOWNERS alone is not access control.
 * @sudipdasin

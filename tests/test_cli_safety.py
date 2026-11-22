@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 MemBoost Pro contributors
 """Nonprivileged CLI integration; never runs --yes against a known profile."""
 from concurrent.futures import ThreadPoolExecutor
 import json

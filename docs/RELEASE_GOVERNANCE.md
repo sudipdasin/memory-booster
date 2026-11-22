@@ -1,20 +1,22 @@
-# Review, ownership and publication controls
+# Governance — canonical MemBoost Pro repository
 
-MemBoost Pro's official repository is governed by its owner. Changes from outside contributors should be proposed as pull requests and must be deliberately reviewed by `@sudipdasin` before merging.
+**Owner:** `@sudipdasin`. All incoming improvements to the canonical repository require a pull request and your approval before merging. GPL gives downstream rights to fork and distribute; it does not grant anyone write privileges to this repository.
 
-## Repository owner configuration required in GitHub
+## GitHub settings the owner must activate
 
-1. Open **Settings → Rules → Rulesets** (or Settings → Branches → Branch protection) and create an active rule targeting `main` and `release/*`.
-2. Require a pull request before merging; require approving reviews, request reviews from CODEOWNERS, dismiss stale approvals on further commits, and require passing `ci/circleci` status checks (use the actual status names displayed on a successful PR).
-3. Disable force pushes, branch deletion and any unwanted admin bypass; turn off auto-merge. Limit direct-push access and ensure actions/bots have minimum required permissions.
-4. Keep GitHub Actions disabled per `docs/CI_PROVIDER_POLICY.md`. CI must run in CircleCI, which is not a substitute for an owner's review.
-5. Review all release assets and approve CircleCI's manual `hold-release` gate before any GitHub Releases publishing job executes. The publishing job also needs a protected, minimal-scope credential.
-6. Check settings with a test PR made by a contributor before changing repository visibility.
+Use `Settings → Rules → Rulesets` to create active branch rules for `main` and `release/*` (or use branch protection if rulesets unavailable). Set:
 
-**Technical limitation:** GitHub does not allow a PR author to approve their own PR. A solo maintainer who authors changes must instead obtain an independent review or use a deliberately configured owner exception. CODEOWNERS alone does not protect a branch. Repository owners may be able to bypass protections depending on the configured ruleset.
+- Require pull request before merging; require approval from a code owner (`.github/CODEOWNERS` contains `* @sudipdasin`), dismiss stale approvals, and require the most recent reviewable push to be approved by a person other than its pusher where possible.
+- Require **all three exact CircleCI checks**: `ci/circleci: build-test-package`, `ci/circleci: headless-sanitizers`, and `ci/circleci: ubuntu-2404-vm-install`. Never replace them with GitHub Actions.
+- Block force pushes and deletions; apply rules to admins and disable bypasses you do not want; avoid granting broad merge or direct-push privileges.
+- Keep auto-merge disabled and use the CircleCI `hold-release` manual release approval step, with restricted credentials in a CircleCI context.
 
-Anyone may fork, modify or redistribute legally under the open-source license, but **that does not grant them write access to the canonical `sudipdasin/memory-booster` repository**.
+**Solo maintainer caveat:** GitHub does not permit PR authors to approve their own PRs. For assistant-authored commits authenticated as your user, required codeowner approval may require an independent trusted maintainer or a deliberate owner-only bypass exception. Choose the policy deliberately, test with a sample PR and do not silently circumvent it.
 
-## Release conditions
+## Merging order
 
-Use a versioned, protected release branch or a signed annotated tag on a tested commit. For a public release confirm: (a) explicit owner approval of the exact source diff and license, (b) complete green CircleCI build, sanitizer and independent Linux VM installation jobs, (c) exact archive hashes, (d) a user-installable release artifact and documentation, and (e) public, unauthenticated download checks after making the repo public. Do not claim cross-distro support beyond what was actually tested.
+v2 owner-review PR #1 → v3 Memory Sentinel PR #2 → GPL Community v3.0.1 PR #3. After each merge, verify that subsequent PR is correctly targeted to `main` and the final diff includes only the intended changes. Every merge requires your explicit authorization. Nothing in this source document configures GitHub settings by itself.
+
+## Public launch gate
+
+Before visibility becomes public, inspect repository history, assets, licenses and all older versioned downloads. Reconfirm checksums and the actual tag/branch commit. A public repository exposes history and all public branches, not just `main`. Publishing a GitHub Release requires a separate approved tag and protected CircleCI context.

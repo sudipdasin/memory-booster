@@ -13,7 +13,7 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y g++ cmake libx11-dev xvfb xauth dpkg-dev python3
       - run:
-          name: Public exposure and source metadata audit
+          name: GPL source notice, contributor provenance and public exposure audit
           command: python3 scripts/public_release_audit.py
       - run:
           name: Compile with native GUI and run complete tests
@@ -44,6 +44,8 @@ jobs:
             dpkg-deb -c dist/memboost-pro-*.deb > dist/package-contents.txt
             grep -Fq 'usr/bin/memboost' dist/package-contents.txt
             grep -Fq 'licenses/memboost-pro/LICENSE' dist/package-contents.txt
+            grep -Fq 'licenses/memboost-pro/COPYRIGHT.md' dist/package-contents.txt
+            grep -Fq 'licenses/memboost-pro/MIT-legacy.txt' dist/package-contents.txt
       - store_artifacts:
           path: dist
           destination: release-build
@@ -91,7 +93,9 @@ jobs:
             ctest --test-dir build-vm --output-on-failure
             (cd build-vm && cpack -G DEB)
             sudo apt-get install -y ./build-vm/memboost-pro-*.deb
-            /usr/bin/memboost --version | grep -F '3.0.0'
+            test "$(/usr/bin/memboost --version)" = "MemBoost Pro $(cat VERSION)"
+            cmp LICENSE /usr/share/licenses/memboost-pro/LICENSE
+            cmp LICENSES/MIT-legacy.txt /usr/share/licenses/memboost-pro/MIT-legacy.txt
             /usr/bin/memboost --self-test
             /usr/bin/memboost --diagnose
             /usr/bin/memboost --signals
