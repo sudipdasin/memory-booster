@@ -1,5 +1,9 @@
 # MemBoost Pro
 
+**Development milestone: v0.3.0** (local tests passed; CircleCI pending). The last packaged distribution remains v0.1.1 until the next fully validated release. This repository remains private during the public-readiness review.
+
+See [Public readiness checklist](docs/PUBLIC_READINESS.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md). All source is available under the proposed [MIT License](LICENSE); the repository owner must review this irrevocable public-grant decision before changing visibility.
+
 **v0.1.1 — downloadable Linux release (Debian 13 x86-64 baseline).** The private repository provides verified local packages directly on the GitHub homepage; this does **not** mean a GitHub Releases entry was created. Packages for other distributions are not certified.
 
 ## Download / Install
@@ -95,4 +99,4 @@ Rebuilt from the user-supplied `Memboost Pro.txt` initial GTK3 concept to fix co
 
 ## Licensing
 
-This repository is private and no redistribution license has been declared. Licensing and any public release require the repository owner's decision.
+Proposed public-source license: [MIT](LICENSE), for review before making this repository public. The current repository remains private.

@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <limits>
 #include <map>
+#include <string_view>
 #include <sstream>
 #include <sys/types.h>
 #include <unistd.h>
@@ -16,21 +17,21 @@ namespace mb {
 namespace fs=std::filesystem;
 static std::string trim(std::string s){auto p=s.find_first_not_of(" \t\r\n"); if(p==s.npos)return {}; auto q=s.find_last_not_of(" \t\r\n");return s.substr(p,q-p+1);}
 static std::string read_first(const fs::path& p){std::ifstream f(p);std::string s;std::getline(f,s);return trim(s);}
-static bool write_value(const fs::path& p,const std::string& v){std::ofstream f(p);if(!f)return false;f<<v<<'\n';f.flush();return f.good();}
+static bool write_value(const fs::path& p,const std::string& v){std::ofstream f(p);if(!f)return false;f<<v<<'\n';f.close();return !f.fail();}
 static bool numeric(std::string s){return !s.empty() && std::all_of(s.begin(),s.end(),[](unsigned char c){return std::isdigit(c);});}
 Memory parse_memory(std::istream& in){
  Memory m;std::string line;std::map<std::string,uint64_t> vals;
  while(std::getline(in,line)){std::istringstream is(line);std::string key,unit;uint64_t value=0;if(!(is>>key>>value))continue;if(key.empty()||key.back()!=':')continue;key.pop_back();if(!(is>>unit)||unit!="kB")continue;vals[key]=value;}
  auto get=[&](const char* k){auto it=vals.find(k);return it==vals.end()?uint64_t(0):it->second;};
- m.total=get("MemTotal");m.free=get("MemFree");m.available=get("MemAvailable");m.cached=get("Cached");m.buffers=get("Buffers");m.swap_total=get("SwapTotal");m.swap_free=get("SwapFree");m.valid=m.total>0;
+ m.total=get("MemTotal");m.free=get("MemFree");m.available=get("MemAvailable");m.cached=get("Cached");m.buffers=get("Buffers");m.swap_total=get("SwapTotal");m.swap_free=get("SwapFree");m.valid=m.total>0 && (!vals.count("MemAvailable") || get("MemAvailable") <= m.total) && (!vals.count("SwapFree") || get("SwapFree") <= m.swap_total);
  if(!vals.count("MemAvailable")){uint64_t v=m.free;for(auto n:{m.cached,m.buffers}){v = (n > m.total || v > m.total-n) ? m.total : v+n;}m.available=std::min(v,m.total);}
  m.available=std::min(m.available,m.total);m.swap_free=std::min(m.swap_free,m.swap_total);return m;
 }
 Pressure parse_pressure(std::istream& in){Pressure p;std::string line;
- while(std::getline(in,line)){std::istringstream is(line);std::string kind,part;if(!(is>>kind))continue; if(kind!="some"&&kind!="full")continue;p.available=true;
- while(is>>part){auto pos=part.find('=');if(pos==std::string::npos)continue;std::string key=part.substr(0,pos);try{double val=std::stod(part.substr(pos+1));if(!std::isfinite(val)||val<0||val>100)continue;
- if(kind=="some"&&key=="avg10")p.some10=val;else if(kind=="some"&&key=="avg60")p.some60=val;
- else if(kind=="full"&&key=="avg10")p.full10=val;else if(kind=="full"&&key=="avg60")p.full60=val;}catch(...){} }
+ while(std::getline(in,line)){std::istringstream is(line);std::string kind,part;if(!(is>>kind))continue; if(kind!="some"&&kind!="full")continue;
+ while(is>>part){auto pos=part.find('=');if(pos==std::string::npos)continue;std::string key=part.substr(0,pos);try{const std::string str=part.substr(pos+1);std::size_t consumed=0;double val=std::stod(str,&consumed);if(consumed!=str.size()||!std::isfinite(val)||val<0||val>100)continue;
+ if(kind=="some"&&key=="avg10"){p.some10=val;p.available=true;}else if(kind=="some"&&key=="avg60")p.some60=val;
+ else if(kind=="full"&&key=="avg10"){p.full10=val;p.available=true;}else if(kind=="full"&&key=="avg60")p.full60=val;}catch(...){} }
  }return p;
 }
 static std::vector<Process> top_processes(){std::vector<Process> v;std::error_code ec;
@@ -59,6 +60,8 @@ ApplyResult apply_profile(const Profile& p,const std::string& proc_root,bool dry
  if(p.swappiness<0||p.swappiness>200||p.vfs_cache_pressure<1||p.vfs_cache_pressure>1000)return {false,"Invalid profile range"};
  fs::path root=fs::path(proc_root)/"sys/vm";auto sw=root/"swappiness",vf=root/"vfs_cache_pressure";
  auto old_sw=read_first(sw),old_vf=read_first(vf);if(!numeric(old_sw)||!numeric(old_vf))return {false,"Kernel settings unavailable or unreadable"};
+ // Reject implausible kernel state rather than writing a profile that cannot be safely restored.
+ try {if(std::stoll(old_sw)>200 || std::stoll(old_vf)<1 || std::stoll(old_vf)>1000) return {false,"Original kernel settings outside supported range"};} catch(...) {return {false,"Unparseable kernel settings"};}
  if(dry_run)return {true,"Dry run: would change swappiness "+old_sw+" -> "+std::to_string(p.swappiness)+", vfs_cache_pressure "+old_vf+" -> "+std::to_string(p.vfs_cache_pressure)};
  if(proc_root=="/proc" && ::geteuid()!=0)return {false,"Administrator privileges required (use pkexec)"};
  // A failed write can still have partially modified a kernel value. Always

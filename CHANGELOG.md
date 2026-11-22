@@ -1,3 +1,17 @@
+## 0.3.0 — 2026-11-22
+- Add read-only `--self-test` installation diagnostic.
+- Add permissive MIT licensing for potential public source distribution.
+- Add native X11 automated end-to-end tab navigation and confirmation-cancel test.
+- Add offline public-release audit to catch version mismatches and credential-like material.
+- Expand CircleCI verification to headless sanitizer job, GUI interaction test and package audit.
+- Keep v0.1.1 packages available until the next release is published.
+
+## 0.2.0 — 2026-11-22
+- Reject malformed PSI averages and impossible kernel memory counters rather than asserting false precision.
+- Validate old sysctl values before applying a profile and detect close-time write errors.
+- Reject extra CLI options, add malformed-input tests, and use randomized private directories for test fixtures.
+- Expand CTest safety coverage without privileged host writes.
+
 # Changelog
 
 ## 0.1.1 — 2026-11-22
