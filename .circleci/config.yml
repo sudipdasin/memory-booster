@@ -71,6 +71,63 @@ jobs:
             cmake --build build-sanitized --parallel 2
             ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 \
               ctest --test-dir build-sanitized --output-on-failure
+  ubuntu-2404-vm-install:
+    machine:
+      image: ubuntu-2404:current
+    resource_class: medium
+    steps:
+      - checkout
+      - run:
+          name: Install system dependencies on an actual disposable Ubuntu VM
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y cmake g++ python3 libx11-dev libx11-6 xvfb xauth dpkg-dev
+      - run:
+          name: Build, install and exercise packaged app on Ubuntu VM
+          command: |
+            set -eu
+            cmake -S . -B build-vm -DCMAKE_BUILD_TYPE=Release -DMEMBOOST_BUILD_GUI=ON
+            cmake --build build-vm --parallel 2
+            ctest --test-dir build-vm --output-on-failure
+            (cd build-vm && cpack -G DEB)
+            sudo apt-get install -y ./build-vm/memboost-pro-*.deb
+            /usr/bin/memboost --version | grep -F '2.0.0'
+            /usr/bin/memboost --self-test
+            /usr/bin/memboost --diagnose
+            /usr/bin/memboost --watch --samples 2 --interval-ms 200
+            /usr/bin/memboost --json | python3 -m json.tool > /dev/null
+            set +e
+            xvfb-run -a timeout 5s /usr/bin/memboost --gui
+            rc=$?
+            set -e
+            test "$rc" = 124
+            python3 scripts/public_release_audit.py
+            sudo apt-get remove -y memboost-pro
+            test ! -e /usr/bin/memboost
+      - run:
+          name: Verify profile apply and rollback in temporary VM (restore on exit)
+          command: |
+            set -eu
+            before_sw=$(cat /proc/sys/vm/swappiness)
+            before_vf=$(cat /proc/sys/vm/vfs_cache_pressure)
+            restore() {
+              sudo sysctl -w vm.swappiness="$before_sw" vm.vfs_cache_pressure="$before_vf" >/dev/null
+            }
+            trap restore EXIT
+            # Test against host VM sysctls only if kernel allows; no tuning of a shared CI host.
+            if sudo test -w /proc/sys/vm/swappiness && sudo test -w /proc/sys/vm/vfs_cache_pressure; then
+              cmake --install build-vm --prefix "$HOME/memboost-test-prefix"
+              sudo "$HOME/memboost-test-prefix/bin/memboost" --apply balanced --yes
+              test "$(cat /proc/sys/vm/swappiness)" = 60
+              test "$(cat /proc/sys/vm/vfs_cache_pressure)" = 100
+              restore
+              test "$(cat /proc/sys/vm/swappiness)" = "$before_sw"
+              test "$(cat /proc/sys/vm/vfs_cache_pressure)" = "$before_vf"
+            else
+              echo 'VM prohibits sysctl writes; mark privileged tuning as not verified on this VM.'
+            fi
+  hold-release:
+    type: approval
   publish-github-release:
     docker:
       - image: cimg/python:3.12
@@ -93,10 +150,23 @@ workflows:
           filters:
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
-      - publish-github-release:
+      - ubuntu-2404-vm-install:
+          filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
+      - hold-release:
           requires:
             - build-test-package
             - headless-sanitizers
+            - ubuntu-2404-vm-install
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
+      - publish-github-release:
+          requires:
+            - hold-release
           context: memboost-release
           filters:
             branches:

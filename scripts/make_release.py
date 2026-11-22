@@ -13,7 +13,7 @@ import tarfile
 import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
-SOURCE_FILES=['.circleci/config.yml','.gitignore','CHANGELOG.md','CMakeLists.txt',
+SOURCE_FILES=['.github/CODEOWNERS','.circleci/config.yml','.gitignore','CHANGELOG.md','CMakeLists.txt',
               'LICENSE','README.md','VERSION','SECURITY.md','CONTRIBUTING.md']
 SOURCE_DIRS=['src','tests','packaging','scripts','docs','assets']
 

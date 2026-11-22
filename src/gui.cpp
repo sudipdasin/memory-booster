@@ -30,7 +30,9 @@ struct App {
  static std::string gib(uint64_t kb){char b[40];std::snprintf(b,sizeof(b),"%.2f GiB",kb/1048576.0);return b;}
  void gauge(int x,int y,int ww,int hh,double share,unsigned long c){fill(x,y,ww,hh,side);fill(x,y,static_cast<int>(ww*std::clamp(share,0.0,1.0)),hh,c);}
  void tabs(){fill(0,0,width,84,side);label(32,34,"MEMBOOST  PRO",teal);label(32,59,"Native Linux memory diagnostics",muted);
-  const char* labels[]={"Overview","Processes","Profiles","Setup guide","Activity"};for(int i=0;i<5;i++)button(330+i*137,22,127,40,labels[i],tab==i);
+  const char* labels[]={"Overview","Processes","Diagnosis","Profiles","Setup guide","Activity"};
+  const int origin=303, step=(width-origin-16)/6;
+  for(int i=0;i<6;i++)button(origin+i*step,22,step-7,40,labels[i],tab==i);
  }
  void overview(){auto& m=snap.memory;int half=(width-76)/2;
  box(26,104,half,172,"PHYSICAL MEMORY");box(50+half,104,half,172,"SWAP");
@@ -48,6 +50,22 @@ struct App {
  void processes(){box(26,104,width-52,553,"TOP MEMORY CONSUMERS  /  resident set size");label(54,158,"PID",muted);label(155,158,"PROCESS",muted);label(width-205,158,"RESIDENT RAM",muted);
  int yy=189;for(auto& p:snap.processes){fill(43,yy-24,width-87,40,(yy/40)%2?card:side);label(54,yy,std::to_string(p.pid),text);label(155,yy,p.name.substr(0,42),text);label(width-205,yy,std::to_string(p.rss_kib/1024)+" MiB",teal);yy+=42;if(yy>640)break;}
  label(54,636,"Process list is monitoring-only; no processes are terminated.",muted);
+ }
+ void diagnosis(){
+  box(26,104,width-52,553,"MEMORY HEALTH  /  READ-ONLY DIAGNOSIS");
+  const auto d=mb::diagnose(snap);
+  label(50,164,"Pressure grade: "+d.level+" (advisory, not a speed guarantee)",d.level=="high"?red:teal);
+  if(snap.cgroup.available){
+   const auto bytes=[](uint64_t n){return std::to_string(n/1048576)+" MiB";};
+   label(50,206,"cgroup v2 usage: "+bytes(snap.cgroup.current_bytes)+" / "+
+         (snap.cgroup.limited?bytes(snap.cgroup.limit_bytes):"unlimited"),text);
+   if(snap.cgroup.limited)gauge(50,220,width-100,15,double(snap.cgroup.current_bytes)/snap.cgroup.limit_bytes,amber);
+  }else label(50,206,"cgroup v2 counters unavailable; host RAM remains visible.",muted);
+  int y=277;
+  for(const auto& f:d.findings){label(50,y,f.substr(0,108),text);y+=37;if(y>385)break;}
+  y=438;
+  for(const auto& a:d.advice){label(50,y,a.substr(0,108),muted);y+=33;if(y>605)break;}
+  label(50,628,"Do not tune solely on percentage used: Linux caches free memory when needed.",amber);
  }
  void profiles(){box(26,104,width-52,420,"SELECT A REVERSIBLE, TEMPORARY TUNING PROFILE");
  auto ps=mb::profiles();for(int i=0;i<3;i++){int y=160+i*91;fill(48,y,width-96,78,i==profile?side:card);outline(48,y,width-96,78,i==profile?teal:border);label(73,y+29,ps[i].name+"     swappiness="+std::to_string(ps[i].swappiness)+"  vfs_cache_pressure="+std::to_string(ps[i].vfs_cache_pressure),text);label(73,y+56,ps[i].explanation,muted);}
@@ -72,7 +90,7 @@ struct App {
  label(width/2-293,height/2-30,"Apply profile: "+p.name+"?",text);label(width/2-293,height/2+2,"Only swappiness and vfs_cache_pressure will change.",muted);
  button(width/2-280,height/2+40,200,44,"Cancel");button(width/2+50,height/2+40,230,44,"Apply (polkit)",true);
  }
- void draw(){fill(0,0,width,height,bg);tabs();if(tab==0)overview();else if(tab==1)processes();else if(tab==2)profiles();else if(tab==3)guide();else activity();
+ void draw(){fill(0,0,width,height,bg);tabs();if(tab==0)overview();else if(tab==1)processes();else if(tab==2)diagnosis();else if(tab==3)profiles();else if(tab==4)guide();else activity();
  fill(0,height-43,width,43,side);label(27,height-17,child>0?"Authorization / tuning in progress...":message.substr(0,115),child>0?amber:muted);if(confirming)modal();XFlush(d);
  }
  void sample(){snap=mb::collect();double share=snap.memory.total?double(snap.memory.total-snap.memory.available)/snap.memory.total:0;history.push_back(share);if(history.size()>120)history.pop_front();}
@@ -83,8 +101,9 @@ struct App {
  child=pid;message="Waiting for administrator authorization...";
  }
  void click(int x,int y){if(confirming){if(y>=height/2+40&&y<height/2+84){if(x>=width/2-280&&x<width/2-80)confirming=false;else if(x>=width/2+50&&x<width/2+280){confirming=false;apply();}}return;}
- if(y>=22&&y<=62){for(int i=0;i<5;i++)if(x>=330+i*137&&x<457+i*137){tab=i;return;}}
- if(tab==2){for(int i=0;i<3;i++)if(x>=48&&x<width-48&&y>=160+i*91&&y<238+i*91){profile=i;return;}
+ if(y>=22&&y<=62){const int origin=303,step=(width-origin-16)/6;
+  for(int i=0;i<6;i++)if(x>=origin+i*step&&x<origin+i*step+step-7){tab=i;return;}}
+ if(tab==3){for(int i=0;i<3;i++)if(x>=48&&x<width-48&&y>=160+i*91&&y<238+i*91){profile=i;return;}
   if(x>=48&&x<=318&&y>=453&&y<501){confirming=true;return;}}
  }
  int run(){d=XOpenDisplay(nullptr);if(!d){std::cerr<<"Cannot open X11 display. Use memboost --status for headless mode.\n";return 3;}

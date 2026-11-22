@@ -34,6 +34,74 @@ Pressure parse_pressure(std::istream& in){Pressure p;std::string line;
  else if(kind=="full"&&key=="avg10"){p.full10=val;p.available=true;}else if(kind=="full"&&key=="avg60")p.full60=val;}catch(...){} }
  }return p;
 }
+static bool parse_u64(const std::string& raw,uint64_t& out){
+ const auto s=trim(raw);if(!numeric(s))return false;
+ try {size_t n=0;auto v=std::stoull(s,&n);if(n!=s.size())return false;out=v;return true;}catch(...){return false;}
+}
+Cgroup parse_cgroup(const std::string& current,const std::string& limit,const std::string& swap_current,const std::string& swap_limit){
+ Cgroup c;
+ if(!parse_u64(current,c.current_bytes))return c;
+ c.available=true;
+ if(parse_u64(limit,c.limit_bytes)&&c.limit_bytes>0)c.limited=true;
+ if(parse_u64(swap_current,c.swap_current_bytes)){
+  c.swap_available=true;
+  if(parse_u64(swap_limit,c.swap_limit_bytes)&&c.swap_limit_bytes>0)c.swap_limited=true;
+ }
+ return c;
+}
+Diagnosis diagnose(const Snapshot& s){
+ Diagnosis d;
+ if(!s.memory.valid){d.findings.push_back("Memory counters missing or inconsistent; diagnostics unavailable.");d.advice.push_back("Verify that /proc/meminfo is mounted and readable.");return d;}
+ bool warn=false,critical=false;
+ if(s.pressure.available){
+  critical=s.pressure.some10>=25.0 || s.pressure.full10>=5.0;
+  warn=s.pressure.some10>=10.0 || s.pressure.full10>=1.0;
+  if(critical)d.findings.push_back("High short-term task stalls detected (PSI); investigate active workloads.");
+  else if(warn)d.findings.push_back("Elevated short-term task stalls detected (PSI).");
+  else d.findings.push_back("Low short-term memory stalls reported by PSI.");
+ }else d.findings.push_back("Kernel memory PSI is unavailable; pressure grade is limited.");
+ if(s.cgroup.available&&s.cgroup.limited){
+  const double share=static_cast<double>(s.cgroup.current_bytes)/static_cast<double>(s.cgroup.limit_bytes);
+  if(share>=0.90){critical=true;d.findings.push_back("Cgroup memory usage is at least 90% of its limit.");}
+  else if(share>=0.80){warn=true;d.findings.push_back("Cgroup memory usage is at least 80% of its limit.");}
+  else d.findings.push_back("Cgroup memory usage is below 80% of its limit.");
+ }else d.findings.push_back("No finite cgroup v2 memory limit was detected.");
+ d.level=critical?"high":warn?"elevated":(s.pressure.available||s.cgroup.limited?"normal":"unknown");
+ if(critical||warn){
+  d.advice.push_back("Inspect the processes tab and identify persistent memory consumers before changing settings.");
+  d.advice.push_back("Compare PSI and application latency under the same workload; avoid clearing useful page caches.");
+ }else d.advice.push_back("No automatic tuning is indicated by these observations; continue monitoring under load.");
+ if(s.cgroup.limited)d.advice.push_back("A container or service memory limit may matter more than host free RAM.");
+ d.advice.push_back("zram, zswap and OOM policy should be managed using distribution-specific tools.");
+ return d;
+}
+std::string diagnostic_report(const Snapshot& s){
+ auto d=diagnose(s);std::ostringstream o;
+ o<<"MemBoost Pro | diagnostic grade: "<<d.level<<" (advisory, not a performance guarantee)\n";
+ if(s.cgroup.available){o<<"Cgroup v2 current="<<s.cgroup.current_bytes<<" bytes; limit=";
+  if(s.cgroup.limited)o<<s.cgroup.limit_bytes;else o<<"unlimited";o<<"\n";}
+ for(auto& f:d.findings)o<<"Finding: "<<f<<"\n";
+ for(auto& a:d.advice)o<<"Suggestion: "<<a<<"\n";
+ return o.str();
+}
+// Use the process' actual unified cgroup path rather than assuming the host root.
+// Reject traversal and non-cgroup paths; a container may have no v2 mount.
+static fs::path local_cgroup_mount(){
+ fs::path base="/sys/fs/cgroup";
+ std::ifstream proc("/proc/self/cgroup"); std::string line;
+ while(std::getline(proc,line)){
+  if(line.rfind("0::",0)!=0)continue;
+  std::string rel=line.substr(3);
+  if(rel.empty() || rel[0]!='/' || rel.find("..")!=std::string::npos || rel.find('\\')!=std::string::npos)return {};
+  // The mount root of a cgroup namespace often already represents this cgroup.
+  // Prefer the nested path if it exists; otherwise use mount root if readable.
+  fs::path nested=base/rel.substr(1);
+  if(fs::is_regular_file(nested/"memory.current"))return nested;
+  break;
+ }
+ if(fs::is_regular_file(base/"memory.current"))return base;
+ return {};
+}
 static std::vector<Process> top_processes(){std::vector<Process> v;std::error_code ec;
  for(auto it=fs::directory_iterator("/proc",fs::directory_options::skip_permission_denied,ec);!ec&&it!=fs::directory_iterator();it.increment(ec)){
   const std::string name=it->path().filename().string();if(!numeric(name))continue;int pid=0;try{pid=std::stoi(name);}catch(...){continue;}
@@ -45,6 +113,9 @@ static std::vector<Process> top_processes(){std::vector<Process> v;std::error_co
  std::sort(v.begin(),v.end(),[](auto& a,auto& b){return a.rss_kib>b.rss_kib;});if(v.size()>12)v.resize(12);return v;
 }
 Snapshot collect(){Snapshot s;{std::ifstream f("/proc/meminfo");s.memory=parse_memory(f);} {std::ifstream f("/proc/pressure/memory");if(f)s.pressure=parse_pressure(f);}
+ const fs::path cgroot=local_cgroup_mount();
+ if(!cgroot.empty())s.cgroup=parse_cgroup(read_first(cgroot/"memory.current"),read_first(cgroot/"memory.max"),
+                         read_first(cgroot/"memory.swap.current"),read_first(cgroot/"memory.swap.max"));
  s.processes=top_processes();s.swappiness=read_first("/proc/sys/vm/swappiness");s.vfs_cache_pressure=read_first("/proc/sys/vm/vfs_cache_pressure");
  if(s.swappiness.empty()) s.swappiness="unavailable";
  if(s.vfs_cache_pressure.empty()) s.vfs_cache_pressure="unavailable";
@@ -86,11 +157,17 @@ static std::string fmt(uint64_t kib){std::ostringstream out;out<<std::fixed<<std
 std::string report(const Snapshot& s){std::ostringstream o;auto& m=s.memory;if(!m.valid)return "MemBoost Pro: /proc/meminfo unavailable\n";
  o<<"MemBoost Pro | memory report\nRAM total "<<fmt(m.total)<<" | available "<<fmt(m.available)<<" | used "<<fmt(m.total-m.available)<<"\nSwap total "<<fmt(m.swap_total)<<" | used "<<fmt(m.swap_total-m.swap_free)<<"\n";
  if(s.pressure.available)o<<"PSI memory some avg10="<<s.pressure.some10<<"% full avg10="<<s.pressure.full10<<"%\n";
+ if(s.cgroup.available){o<<"cgroup v2: "<<s.cgroup.current_bytes<<" bytes used, ";
+  if(s.cgroup.limited)o<<s.cgroup.limit_bytes<<" bytes limit\n";else o<<"no finite limit\n";}
  o<<"vm.swappiness="<<s.swappiness<<" | vm.vfs_cache_pressure="<<s.vfs_cache_pressure<<"\nZram devices: "<<s.zram.size()<<"\nTop memory processes:\n";
  for(auto& p:s.processes) o<<"  "<<p.pid<<"\t"<<p.name<<"\t"<<p.rss_kib/1024<<" MiB RSS\n";
  return o.str();}
 static std::string esc(const std::string& s){std::ostringstream o;for(unsigned char c:s){if(c=='"'||c=='\\')o<<'\\'<<c;else if(c<32){o<<"\\u"<<std::hex<<std::setw(4)<<std::setfill('0')<<(unsigned)c<<std::dec;}else o<<c;}return o.str();}
 std::string json(const Snapshot& s){auto& m=s.memory;std::ostringstream o;o<<"{\"valid\":"<<(m.valid?"true":"false")<<",\"ram_total_kib\":"<<m.total<<",\"ram_available_kib\":"<<m.available<<",\"swap_total_kib\":"<<m.swap_total<<",\"swap_free_kib\":"<<m.swap_free<<",\"psi_available\":"<<(s.pressure.available?"true":"false")<<",\"psi_some_avg10\":"<<s.pressure.some10<<",\"psi_full_avg10\":"<<s.pressure.full10<<",\"swappiness\":\""<<esc(s.swappiness)<<"\",\"vfs_cache_pressure\":\""<<esc(s.vfs_cache_pressure)<<"\",\"processes\":[";
  for(size_t i=0;i<s.processes.size();++i){auto& p=s.processes[i];if(i)o<<",";o<<"{\"pid\":"<<p.pid<<",\"name\":\""<<esc(p.name)<<"\",\"rss_kib\":"<<p.rss_kib<<"}";}
- o<<"],\"zram\":[";for(size_t i=0;i<s.zram.size();++i){if(i)o<<",";o<<"\""<<esc(s.zram[i])<<"\"";}o<<"]}";return o.str();}
+ o<<"],\"zram\":[";for(size_t i=0;i<s.zram.size();++i){if(i)o<<",";o<<"\""<<esc(s.zram[i])<<"\"";}o<<"],\"schema_version\":2,\"cgroup\":{\"available\":"<<(s.cgroup.available?"true":"false")
+ <<",\"limited\":"<<(s.cgroup.limited?"true":"false")<<",\"current_bytes\":"<<s.cgroup.current_bytes
+ <<",\"limit_bytes\":"<<s.cgroup.limit_bytes<<",\"swap_available\":"<<(s.cgroup.swap_available?"true":"false")
+ <<",\"swap_current_bytes\":"<<s.cgroup.swap_current_bytes<<"},\"diagnosis\":{\"level\":\""<<esc(diagnose(s).level)<<"\"}}";
+ return o.str();}
 }
