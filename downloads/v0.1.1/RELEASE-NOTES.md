@@ -10,6 +10,7 @@
 - CLI status, JSON and dry-run; guarded profiles require confirmation and admin privileges.
 - Improved failed-write rollback with readback; no automatic destructive memory operations.
 - Eight CTest checks and CircleCI build/test/packaging configuration.
+- CircleCI packaging verification updated to avoid a reproducible `pipefail`/`dpkg-deb` broken-pipe error.
 
 ## How to install
 

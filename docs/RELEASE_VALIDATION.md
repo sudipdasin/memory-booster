@@ -22,4 +22,5 @@
 - No separate VM, cross-distribution, older glibc, ARM or Wayland-only test matrix completed.
 - CircleCI project enrollment and pipeline execution have not been observed.
 - No release cryptographic signature or official GitHub Releases entry created.
+- CircleCI first reported a failure. A matching broken-pipe failure was reproduced locally in package verification under `set -o pipefail`; remote job logs are unavailable, so the precise remote failing step is not confirmed. Replaced the local-failing pipeline with a saved listing; the corrected exact local CI gate passed. Successful corrected CircleCI run is still unverified.
 - The private repo publishes a locally verified **limited-target installable release** via tracked GitHub download files; not a universal production certification.

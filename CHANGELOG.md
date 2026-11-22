@@ -6,6 +6,7 @@
 - Correct version reporting and omit desktop launcher from CLI-only installations.
 - Expand CTest to eight checks, including refusal of unsafe/invalid CLI invocations.
 - Validate extracted DEB and TGZ binaries; preserve CircleCI-only CI policy.
+- Correct a CircleCI package-inspection false failure caused by a broken pipe under `pipefail`.
 - Add guarded release publication script for a future authorized CircleCI tag pipeline (not run here).
 
 

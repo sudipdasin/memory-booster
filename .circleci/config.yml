@@ -44,7 +44,8 @@ jobs:
             cd dist
             sha256sum -c SHA256SUMS.txt
             dpkg-deb -I memboost-pro-*.deb
-            dpkg-deb -c memboost-pro-*.deb | grep -q 'usr/bin/memboost'
+            dpkg-deb -c memboost-pro-*.deb > package-contents.txt
+            grep -Fq 'usr/bin/memboost' package-contents.txt
       - store_artifacts:
           path: dist
           destination: release-build

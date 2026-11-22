@@ -76,7 +76,7 @@ Install generated `.deb` with `sudo apt install ./memboost-pro-*.deb`. For other
 
 ## CI
 
-Per [CI provider policy](docs/CI_PROVIDER_POLICY.md), this repository uses **CircleCI exclusively** for automated checks. GitHub Actions is not used. Pushes and pull requests trigger the CircleCI build, test, virtual-display smoke test and packaging jobs if the CircleCI project is enrolled. Build artifacts are uploaded to CircleCI. On a version tag, an optional CircleCI publisher can create a GitHub Releases entry **only if** a protected `GITHUB_TOKEN` has been configured; neither token availability nor publisher execution is assumed. Packages are independently distributed through the versioned `downloads/` folder on the homepage.
+Per [CI provider policy](docs/CI_PROVIDER_POLICY.md), this repository uses **CircleCI exclusively** for automated checks. GitHub Actions is not used. CircleCI enrollment is observed. Pushes and pull requests trigger its build, test, virtual-display smoke test and packaging jobs; consult the repository commit status for the current result. Build artifacts are uploaded to CircleCI. On a version tag, an optional CircleCI publisher can create a GitHub Releases entry **only if** a protected `GITHUB_TOKEN` has been configured; neither token availability nor publisher execution is assumed. Packages are independently distributed through the versioned `downloads/` folder on the homepage.
 
 ## Security and non-goals
 
