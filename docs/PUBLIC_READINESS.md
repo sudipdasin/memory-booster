@@ -2,7 +2,7 @@
 
 This checklist separates measurable engineering checks from decisions that require the repository owner.
 
-- [x] Project source, tests, and version stored together in GitHub.
+- [x] Project source and versioned tests maintained in GitHub; exact v1.0.0 commit status must be verified after publishing.
 - [x] MIT LICENSE included. This permits source redistribution and commercial use; it cannot be unilaterally revoked from recipients of already licensed versions. Review this licensing choice before making the repository public.
 - [x] No credentials required for normal application functionality.
 - [x] Build is nonprivileged. App monitors memory without root; tuning requires explicit confirmation and administrator permissions.

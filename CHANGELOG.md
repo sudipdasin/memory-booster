@@ -1,3 +1,14 @@
+# Changelog
+
+## 1.0.0 — 2026-11-22
+- Supported-target stable baseline for Debian 13 (x86-64) native GUI and headless CLI. Additional distribution compatibility is not certified.
+- Add read-only installation self-test, 32-way concurrent JSON validation, GUI automation, and source-archive packaging controls.
+- Establish end-to-end public-release hygiene with MIT license and privacy/credential-source checks.
+- Deliver SHA-256-checksummed versioned DEB, Linux tarball, source tarball and ZIP bundle on the repository homepage (no cryptographic signing claim).
+- Require separate CircleCI native packaging and headless sanitizer gates; keep GitHub Actions disabled.
+- Restrict automatic tuning to explicit confirmed, temporary and verified sysctl profile writes.
+
+
 ## 0.3.0 — 2026-11-22
 - Add read-only `--self-test` installation diagnostic.
 - Add permissive MIT licensing for potential public source distribution.
@@ -11,8 +22,6 @@
 - Validate old sysctl values before applying a profile and detect close-time write errors.
 - Reject extra CLI options, add malformed-input tests, and use randomized private directories for test fixtures.
 - Expand CTest safety coverage without privileged host writes.
-
-# Changelog
 
 ## 0.1.1 — 2026-11-22
 - Add README homepage links to versioned, locally verified release packages.

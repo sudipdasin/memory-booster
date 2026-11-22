@@ -1,14 +1,21 @@
 /build/
+/build-*/
+/dist-*/
 *.swp
 *.tmp
 *.deb
 *.tar.gz
 *.zip
 .DS_Store
+__pycache__/
 
-# Intentional checked-in, versioned release packages
+# Deliberately tracked, checksummed release packages
 !downloads/
 !downloads/v0.1.1/
 !downloads/v0.1.1/*.deb
 !downloads/v0.1.1/*.tar.gz
 !downloads/v0.1.1/*.zip
+!downloads/v1.0.0/
+!downloads/v1.0.0/*.deb
+!downloads/v1.0.0/*.tar.gz
+!downloads/v1.0.0/*.zip

@@ -71,6 +71,17 @@ jobs:
             cmake --build build-sanitized --parallel 2
             ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 \
               ctest --test-dir build-sanitized --output-on-failure
+  publish-github-release:
+    docker:
+      - image: cimg/python:3.12
+    resource_class: small
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Publish only tested signed-off tag artifacts (requires protected token)
+          command: python3 scripts/publish_release.py
 workflows:
   verify-native-linux:
     jobs:
@@ -80,5 +91,15 @@ workflows:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
       - headless-sanitizers:
           filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
+      - publish-github-release:
+          requires:
+            - build-test-package
+            - headless-sanitizers
+          context: memboost-release
+          filters:
+            branches:
+              ignore: /.*/
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+$/

@@ -1,102 +1,59 @@
 # MemBoost Pro
 
-**Development milestone: v0.3.0** (local tests passed; CircleCI pending). The last packaged distribution remains v0.1.1 until the next fully validated release. This repository remains private during the public-readiness review.
+**v1.0.0 — tested Linux memory diagnostics and reversible tuning for Debian 13 x86-64.** This is a targeted stable release, not a universal all-distro certification. Read [known limitations](docs/releases/v1.0.0.md) before installing.
 
-See [Public readiness checklist](docs/PUBLIC_READINESS.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md). All source is available under the proposed [MIT License](LICENSE); the repository owner must review this irrevocable public-grant decision before changing visibility.
+## Download for Linux
 
-**v0.1.1 — downloadable Linux release (Debian 13 x86-64 baseline).** The private repository provides verified local packages directly on the GitHub homepage; this does **not** mean a GitHub Releases entry was created. Packages for other distributions are not certified.
-
-## Download / Install
-
-| Package | Download |
+| Artifact | Direct repository download |
 |---|---|
-| Debian 13 / compatible amd64 `.deb` | [**Download DEB**](downloads/v0.1.1/MemBoost-Pro-0.1.1-linux-amd64.deb?raw=1) |
-| Linux amd64 archive (`.tar.gz`) | [Download portable archive](downloads/v0.1.1/MemBoost-Pro-0.1.1-linux-amd64.tar.gz?raw=1) |
-| C++ source (`.tar.gz`) | [Download source](downloads/v0.1.1/MemBoost-Pro-0.1.1-source.tar.gz?raw=1) |
-| Complete ZIP / checksums / notes | [Download bundle](downloads/v0.1.1/MemBoost-Pro-0.1.1-download-bundle.zip?raw=1) · [SHA-256](downloads/v0.1.1/SHA256SUMS.txt) · [Release notes](docs/releases/v0.1.1.md) |
+| **Debian 13 amd64 package** | [Download `.deb`](downloads/v1.0.0/MemBoost-Pro-1.0.0-linux-amd64.deb?raw=1) |
+| Linux x86-64 archive | [Download `.tar.gz`](downloads/v1.0.0/MemBoost-Pro-1.0.0-linux-amd64.tar.gz?raw=1) |
+| Source code archive | [Download source](downloads/v1.0.0/MemBoost-Pro-1.0.0-source.tar.gz?raw=1) |
+| **Complete bundle** | [Download ZIP](downloads/v1.0.0/MemBoost-Pro-1.0.0-download-bundle.zip?raw=1) |
+| Verification | [SHA-256 checksums](downloads/v1.0.0/SHA256SUMS.txt) · [Release notes](docs/releases/v1.0.0.md) |
 
-```bash
-sudo apt install ./MemBoost-Pro-0.1.1-linux-amd64.deb
-memboost --status
+The GitHub repository is **currently private**. These are real, versioned, repository-hosted downloads; after the owner makes the repository public, ordinary visitors can download them without authentication. This is **not** a claim that GitHub Releases assets have been published.
+
+```sh
+sudo apt install ./MemBoost-Pro-1.0.0-linux-amd64.deb
+memboost --self-test
 memboost --gui
 ```
 
-**Compatibility:** Linux x86-64, X11 or XWayland for GUI, and on Debian package builds **glibc ≥ 2.38 / libstdc++ ≥ 13.1**. Not compatible with all Ubuntu/Mint versions; build from source on older systems. The portable tarball is still dynamically linked and has the same minimum shared-library versions. The repository is private, so GitHub downloads require an authorized account.
+For the portable archive, unzip/extract it and run the included `usr/bin/memboost` on compatible x86-64 distributions; its system library requirements remain. Build from source on older platforms.
 
-![MemBoost Pro desktop overview](assets/memboost-overview.png)
+![Real MemBoost Pro dashboard under virtual X11](assets/memboost-overview.png)
 
-*Actual screenshot of the native X11 dashboard under a virtual X11 display. Diagnostic values depend on the system.*
+## What it does
 
-**Release gate:** Local GUI/headless builds, 8 tests each, sanitizer tests, packaging and extracted-package smoke tests pass. CircleCI execution on this commit, independent distro/VM testing, signature verification and GitHub Releases asset hosting remain unverified. **Do not describe this as universally stable across distributions.**
+- **Dashboard:** live RAM availability, actual swap usage, PSI pressure, zram detection and memory history graph.
+- **Process viewer:** top resident-memory consumers (read-only, does not kill processes).
+- **Profiles:** three explained temporary tuning options for swappiness and VFS cache pressure, with explicit confirmation and PolicyKit privilege elevation.
+- **Wizard:** five-step setup guide describing responsible Linux memory optimization.
+- **Activity:** on-screen action feedback.
+- **CLI:** monitoring and reports through `--status`, `--json`, `--recommend`, `--self-test` and `--apply PROFILE --dry-run`.
 
-Native **C++17** Linux memory diagnostics and guarded tuning with a graphical desktop dashboard and headless CLI. Built for Linux distributions exposing procfs and sysfs, with an X11 GUI (also runs through XWayland where available).
+Linux uses spare RAM for useful file caches; an application that merely drops caches is not a reliable speed booster. MemBoost does **not** automatically drop caches, cycle swap, start daemons, terminate processes, or modify boot-time settings. Profile changes require administrator approval, are read back and have best-effort rollback on failure. They are not persisted across reboot.
 
-## What works
+## Compatibility
 
-- Live RAM, swap, memory pressure (PSI), and zram diagnostics
-- Largest resident-memory processes, bar graphs and history chart
-- A five-tab desktop GUI with Overview, Processes, Profiles, Setup guide and Activity
-- Read-only operation by default, no root login required
-- Three documented, temporary kernel tuning profiles (only swappiness and VFS cache pressure)
-- Confirmation dialog plus PolicyKit elevation at the point of applying a profile
-- Kernel value readback and rollback attempts on failure; no system service restarts
-- Unit tests, CLI smoke tests, CMake builds, CircleCI configuration and Debian packages
-
-**Caution:** Linux uses spare memory for useful caches; a low 'free RAM' count does not necessarily mean a problem. The app does not claim to create physical RAM or promise a universal speed boost. `zram`, `zswap`, `oomd`, clearing caches, disabling swap and changing overcommit are deliberately not automatic.
-
-## Build
+Verified release target: Debian GNU/Linux 13 x86-64 with X11 or XWayland for GUI. Requires modern glibc (at least 2.38 for the packaged build) and compatible libstdc++. Source builds require CMake 3.16+, C++17, and optionally libX11 development headers. Other distributions/kernels, non-x86-64 platforms and Wayland-only without XWayland remain unverified.
 
 ```sh
-# Debian / Ubuntu: sudo apt install build-essential cmake libx11-dev
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
-./build/memboost --gui
+python3 scripts/public_release_audit.py
 ```
 
-For headless Linux: `cmake -S . -B build -DMEMBOOST_BUILD_GUI=OFF`.
+For a headless build add `-DMEMBOOST_BUILD_GUI=OFF`. For read-only shell testing: `memboost --self-test`. For an **optional** profile preview without changes: `memboost --apply balanced --dry-run`. Never run the GUI as root.
 
-## CLI
+## Engineering and release evidence
 
-```sh
-memboost --status             # Human-readable read-only snapshot
-memboost --json               # Machine-readable snapshot
-memboost --recommend          # Snapshot and suggested profiles
-memboost --apply balanced --dry-run
-pkexec memboost --apply responsive --yes  # Explicit temporary changes
-```
+Build/test policy: [CircleCI exclusively](docs/CI_PROVIDER_POLICY.md), because GitHub Actions is restricted by billing; no GitHub Actions workflows are enabled. See [validation report](docs/RELEASE_VALIDATION_v1.0.0.md), [public-readiness checklist](docs/PUBLIC_READINESS.md), [official release publishing guide](docs/RELEASE_PUBLISHING.md), [public testing guide](docs/TESTING_GUIDE.md), [security policy](SECURITY.md), [contribution instructions](CONTRIBUTING.md), and [public/private edition separation](docs/EDITION_POLICY.md). Build and release scripts are in `scripts/`.
 
-Do not launch the GUI with sudo. It runs as a normal user, requesting administrator permission only for controlled kernel writes. Profiles change current runtime settings but **do not persist after reboot**. Before tuning, record your system's baseline.
+Do not claim compatibility with all kernels or distribution versions without independent testing. Do not publish unredacted process names in logs or issue reports. Please file reproducible bugs via GitHub Issues.
 
-## Packages
+## License
 
-```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel
-cd build && cpack -G DEB && cpack -G TGZ
-```
-
-Install generated `.deb` with `sudo apt install ./memboost-pro-*.deb`. For other distros use a CMake source build or the tarball and install the binary as appropriate. A full GUI requires a working X11/XWayland display; Wayland-only systems without XWayland can use the CLI.
-
-## CI
-
-Per [CI provider policy](docs/CI_PROVIDER_POLICY.md), this repository uses **CircleCI exclusively** for automated checks. GitHub Actions is not used. CircleCI enrollment is observed. Pushes and pull requests trigger its build, test, virtual-display smoke test and packaging jobs; consult the repository commit status for the current result. Build artifacts are uploaded to CircleCI. On a version tag, an optional CircleCI publisher can create a GitHub Releases entry **only if** a protected `GITHUB_TOKEN` has been configured; neither token availability nor publisher execution is assumed. Packages are independently distributed through the versioned `downloads/` folder on the homepage.
-
-## Security and non-goals
-
-- No shell interpolation or user-provided command execution
-- No startup modifications, persistent systemd overrides or hidden daemon
-- No swapoff, zram teardown, forced cache flushes or process termination
-- Application state is in-memory only; runtime kernel changes reset on reboot
-- Rollback is best-effort; if kernel writes or verification fail, inspect with `sysctl vm.swappiness vm.vfs_cache_pressure`
-- PSI and zram require kernel support and are detected, not presumed
-
-Report defects using Issues. Include distribution, kernel version, X11/Wayland environment, `memboost --status` output with process names redacted where appropriate, and reproducible steps.
-
-## Source provenance
-
-Rebuilt from the user-supplied `Memboost Pro.txt` initial GTK3 concept to fix compilation and safety defects. This project does not redistribute that draft verbatim.
-
-## Licensing
-
-Proposed public-source license: [MIT](LICENSE), for review before making this repository public. The current repository remains private.
+[MIT License](LICENSE) — permits copying, modification and redistribution, including commercial use. The repository owner should confirm this is the intended license **before changing repository visibility**.
