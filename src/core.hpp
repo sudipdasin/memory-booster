@@ -36,6 +36,17 @@ struct Process { int pid=0; std::string name; uint64_t rss_kib=0; };
 struct Snapshot { Memory memory; Pressure pressure; std::vector<Process> processes; std::vector<std::string> zram; Cgroup cgroup; VmCounters vmstat; CgroupEvents cgroup_events; std::string swappiness="unavailable", vfs_cache_pressure="unavailable"; };
 struct Profile { std::string name; int swappiness; int vfs_cache_pressure; std::string explanation; };
 struct ApplyResult { bool ok=false; std::string message; };
+// A one-click *preview*, not a promise of reclaimable RAM or speed improvement.
+// Unsafe situations produce guidance rather than speculative kernel writes.
+enum class OptimizationAction { observe, offer_responsive, investigate, unavailable };
+struct OptimizationPlan {
+ OptimizationAction action=OptimizationAction::unavailable;
+ std::string headline, explanation;
+ bool can_apply=false;
+};
+OptimizationPlan plan_optimization(const Snapshot& s);
+std::string optimization_report(const Snapshot& s);
+
 Memory parse_memory(std::istream& input);
 Pressure parse_pressure(std::istream& input);
 VmCounters parse_vmstat(std::istream& input);

@@ -11,7 +11,7 @@ jobs:
           name: Install native toolchain, X11 and packaging tools
           command: |
             sudo apt-get update
-            sudo apt-get install -y g++ cmake libx11-dev xvfb xauth dpkg-dev python3
+            sudo apt-get install -y g++ cmake libx11-dev libxft2 fonts-dejavu-core xfonts-base xvfb xauth dpkg-dev python3
       - run:
           name: GPL source notice, contributor provenance and public exposure audit
           command: python3 scripts/public_release_audit.py
@@ -25,7 +25,7 @@ jobs:
           name: Verify native GUI startup
           command: |
             set +e
-            xvfb-run -a timeout 4s ./build/memboost --gui
+            xvfb-run -a -s "-screen 0 1600x1000x24" timeout 4s ./build/memboost --gui
             rc=$?
             if [ "$rc" -ne 124 ]; then echo "GUI failed or quit unexpectedly: $rc"; exit 1; fi
       - run:
@@ -83,7 +83,7 @@ jobs:
           name: Install system dependencies on an actual disposable Ubuntu VM
           command: |
             sudo apt-get update
-            sudo apt-get install -y cmake g++ python3 libx11-dev libx11-6 xvfb xauth dpkg-dev
+            sudo apt-get install -y cmake g++ python3 libx11-dev libx11-6 libxft2 fonts-dejavu-core xfonts-base xvfb xauth dpkg-dev
       - run:
           name: Build, install and exercise packaged app on Ubuntu VM
           command: |
@@ -97,6 +97,12 @@ jobs:
             cmp LICENSE /usr/share/licenses/memboost-pro/LICENSE
             cmp LICENSES/MIT-legacy.txt /usr/share/licenses/memboost-pro/MIT-legacy.txt
             /usr/bin/memboost --self-test
+            # A Smart Optimize preview must not modify live VM sysctls.
+            before_sw=$(cat /proc/sys/vm/swappiness)
+            before_vfs=$(cat /proc/sys/vm/vfs_cache_pressure)
+            /usr/bin/memboost --optimize --dry-run
+            test "$(cat /proc/sys/vm/swappiness)" = "$before_sw"
+            test "$(cat /proc/sys/vm/vfs_cache_pressure)" = "$before_vfs"
             /usr/bin/memboost --diagnose
             /usr/bin/memboost --signals
             /usr/bin/memboost --track --samples 2 --interval-ms 200 --format jsonl | python3 -c "import json,sys; lines=[json.loads(x) for x in sys.stdin]; assert len(lines)==2 and all(x['telemetry_schema']==1 for x in lines)"

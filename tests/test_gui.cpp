@@ -31,11 +31,11 @@ static Window find_app(Display* d) {
 
 static unsigned long long fingerprint(Display* d, Window w) {
     XWindowAttributes a;
-    if (!XGetWindowAttributes(d,w,&a) || a.width<950 || a.height<680) throw std::runtime_error("invalid GUI window geometry");
+    if (!XGetWindowAttributes(d,w,&a) || a.width<1100 || a.height<760) throw std::runtime_error("invalid GUI window geometry");
     auto* img = XGetImage(d,w,0,0,a.width,a.height,AllPlanes,ZPixmap);
     if (!img) throw std::runtime_error("X11 framebuffer not accessible");
     unsigned long long h = 1469598103934665603ULL;
-    for (int y=110; y<660; y+=13) for (int x=50; x<900; x+=13) {
+    for (int y=112; y<725; y+=13) for (int x=271; x<1200; x+=13) {
         h = (h ^ XGetPixel(img,x,y))*1099511628211ULL;
     }
     XDestroyImage(img);
@@ -75,22 +75,33 @@ int main(int argc,char** argv) {
         std::this_thread::sleep_for(std::chrono::milliseconds(350));
         auto previous=fingerprint(d,w);
         for (int i=1;i<7;i++) {
-            click(d,w,265+i*((1040-265-16)/7)+28,35);
-            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            click(d,w,100,214+i*57);
+            std::this_thread::sleep_for(std::chrono::milliseconds(230));
             auto next=fingerprint(d,w);
-            if (next==previous) throw std::runtime_error("tab "+std::to_string(i)+" did not update the rendered view");
+            if (next==previous) throw std::runtime_error("sidebar tab "+std::to_string(i)+" did not update the rendered view");
             previous=next;
         }
-        // Test profile selection and confirmation cancellation without writing host settings.
-        click(d,w,265+4*((1040-265-16)/7)+28,35);
-        std::this_thread::sleep_for(std::chrono::milliseconds(280));
-        click(d,w,90,273);  // Select second profile.
-        click(d,w,110,473); // Open confirmation modal.
-        std::this_thread::sleep_for(std::chrono::milliseconds(280));
-        const auto modal=fingerprint(d,w);
-        click(d,w,290,404); // Cancel (1040/2 - 280 .. -80; 720/2 + 40..+84)
+        // Optimize Memory is a prominent first-class button on Dashboard.
+        click(d,w,100,214); // Dashboard
         std::this_thread::sleep_for(std::chrono::milliseconds(250));
-        if (fingerprint(d,w)==modal) throw std::runtime_error("confirmation modal did not close");
+        const auto dashboard=fingerprint(d,w);
+        click(d,w,1010,245); // Optimize Memory (opens preview; no writes)
+        std::this_thread::sleep_for(std::chrono::milliseconds(230));
+        const auto preview=fingerprint(d,w);
+        if(preview==dashboard)throw std::runtime_error("Optimize Memory preview did not open");
+        click(d,w,386,530); // Cancel safely: dialog at 303,217, Cancel region.
+        std::this_thread::sleep_for(std::chrono::milliseconds(230));
+        if (fingerprint(d,w)==preview) throw std::runtime_error("Optimize preview did not close");
+        // Exercise profile selection and a second cancel without privilege changes.
+        click(d,w,100,214+4*57); // Profiles
+        std::this_thread::sleep_for(std::chrono::milliseconds(220));
+        click(d,w,450,386); // Select second profile
+        click(d,w,350,632); // Preview profile change
+        std::this_thread::sleep_for(std::chrono::milliseconds(220));
+        const auto profile_modal=fingerprint(d,w);
+        click(d,w,386,530); // Cancel
+        std::this_thread::sleep_for(std::chrono::milliseconds(230));
+        if (fingerprint(d,w)==profile_modal) throw std::runtime_error("profile preview did not close");
         int status=0;
         if (waitpid(pid,&status,WNOHANG)==pid) throw std::runtime_error("GUI exited unexpectedly");
         Atom close=XInternAtom(d,"WM_DELETE_WINDOW",False);
@@ -103,8 +114,8 @@ int main(int argc,char** argv) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
         if (pid!=-1) throw std::runtime_error("GUI did not exit on window close");
-        if (!WIFEXITED(status) || WEXITSTATUS(status)!=0) throw std::runtime_error("GUI closed with error");
-        std::cout<<"X11 GUI: seven tabs, diagnosis, profile, confirmation cancel and WM close passed\n";
+        if (!WIFEXITED(status) || WEXITSTATUS(status)!=0) throw std::runtime_error("GUI closed with error: raw="+std::to_string(status)+" signal="+std::to_string(WIFSIGNALED(status)?WTERMSIG(status):0)+" exit="+std::to_string(WIFEXITED(status)?WEXITSTATUS(status):-1));
+        std::cout<<"X11 GUI: seven sidebar tabs, optimize preview/cancel, profile preview/cancel and close passed\n";
         rc=0;
     } catch (const std::exception& e) { std::cerr<<"GUI test failed: "<<e.what()<<"\n"; }
     if (pid>0) {kill(pid,SIGTERM);waitpid(pid,nullptr,0);}

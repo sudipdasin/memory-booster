@@ -1,5 +1,15 @@
 # Changelog
 
+## v3.2.0 — Premium memory cockpit and Smart Optimize (review candidate)
+
+- Completely redesigned the native Linux X11 dashboard with anti-aliased typography (optional runtime Xft), branded sidebar, rich metric cards, live charts and a prominent Optimize Memory action.
+- Introduced conservative optimization planning and read-only preview; only measured moderate pressure plus sufficient headroom may offer optional explicitly authorized reversible kernel tuning.
+- Added `memboost --optimize [--dry-run|--yes]` and policy fixture coverage for normal, critical, missing, invalid, already tuned and constrained systems.
+- Expanded GUI tests for sidebar navigation, Optimize preview/cancel, profile preview/cancel, clean window shutdown and no unapproved sysctl writes.
+- Fixed a real Xft teardown shutdown crash and window placement on 1280-width screens.
+- Preserved GPL-3.0-or-later and historic MIT notices; maintained CircleCI-only CI and manual release gate.
+
+
 ## 3.0.1 — owner-approved GPL community licensing (owner-review candidate)
 
 - Adopt the complete GNU GPL version 3 or later for the new Community release, including SPDX source notices, CPack metadata, installed license and the source/ZIP bundle.

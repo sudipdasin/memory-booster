@@ -194,6 +194,55 @@ Snapshot collect(){Snapshot s;{std::ifstream f("/proc/meminfo");s.memory=parse_m
  }std::sort(s.zram.begin(),s.zram.end());return s;
 }
 std::vector<Profile> profiles(){return {{"balanced",60,100,"Conservative defaults; prioritize kernel-managed caching."},{"responsive",20,75,"Favor interactive responsiveness when RAM headroom is adequate."},{"compressed-swap",100,100,"Consider when zram or compressed swap is already configured; inspect workload first."}};}
+
+OptimizationPlan plan_optimization(const Snapshot& s){
+ const auto& m=s.memory;
+ if(!m.valid||m.total==0||m.available>m.total)
+  return {OptimizationAction::unavailable,"Memory information unavailable","The app will not tune kernel memory settings without reliable measurements.",false};
+ const double headroom=static_cast<double>(m.available)/static_cast<double>(m.total);
+ const bool pressure_high=s.pressure.available&&(s.pressure.some10>=25.0||s.pressure.full10>=5.0);
+ const bool cgroup_critical=s.cgroup.available&&s.cgroup.limited&&s.cgroup.limit_bytes>0&&
+   static_cast<double>(s.cgroup.current_bytes)/s.cgroup.limit_bytes>=0.90;
+ if(pressure_high||cgroup_critical||headroom<0.15)
+  return {OptimizationAction::investigate,"High pressure: review applications first",
+   "Changing swap preferences cannot safely create free RAM. Inspect memory consumers and active workload before tuning.",false};
+ if(!s.pressure.available)
+  return {OptimizationAction::observe,"Monitoring is recommended",
+   "Kernel PSI pressure data is unavailable; avoid speculative changes. No cache clearing or process termination.",false};
+ const bool raised_pressure=s.pressure.some10>=5.0||s.pressure.full10>=0.5;
+ if(!raised_pressure)
+  return {OptimizationAction::observe,"Memory management looks healthy",
+   "No sustained memory stalls detected. Linux reclaims caches as needed; changing settings now may hurt performance.",false};
+ if(headroom<0.25||m.swap_total==0||
+    (s.cgroup.available&&s.cgroup.limited&&s.cgroup.limit_bytes>0&&
+     static_cast<double>(s.cgroup.current_bytes)/s.cgroup.limit_bytes>=0.8))
+  return {OptimizationAction::investigate,"Check system constraints first",
+   "Pressure or memory limits leave too little margin for safe automatic swap tuning; examine the processes and cgroup limits.",false};
+ auto to_int=[](const std::string& str,int& out){
+  if(str.empty()||str.size()>4||str.find_first_not_of("0123456789")!=std::string::npos)return false;
+  try{out=std::stoi(str);return true;}catch(...){return false;}
+ };
+ int sw=0,vfs=0;
+ if(!to_int(s.swappiness,sw)||!to_int(s.vfs_cache_pressure,vfs)||sw<0||sw>200||vfs<1||vfs>1000)
+  return {OptimizationAction::unavailable,"Tuning is unavailable","Kernel memory control values are missing or invalid; no changes will be attempted.",false};
+ // Never increase either kernel preference just to meet the preset.
+ // Respect existing custom tuning because raising either setting may be harmful.
+ if(sw<=20||vfs<75)
+  return {OptimizationAction::observe,"Existing custom tuning retained",
+   "A proposed profile would raise an existing kernel preference or make no useful change. Respect the system's current configuration.",false};
+ return {OptimizationAction::offer_responsive,"Optional responsiveness tuning",
+  "Moderate memory stalls and adequate headroom detected. You may authorize a temporary responsive swap/cache policy; results vary. Changes require administrator approval.",true};
+}
+std::string optimization_report(const Snapshot& s){
+ const auto p=plan_optimization(s);
+ std::ostringstream out;out<<"Memory optimization preview: "<<p.headline<<"\n"<<p.explanation<<"\n";
+ if(p.can_apply)out<<"Proposed temporary settings: vm.swappiness=20, vm.vfs_cache_pressure=75\n"
+   <<"To authorize: pkexec memboost --optimize --yes\n";
+ else out<<"No system changes recommended.\n";
+ out<<"No cache dropping, swap cycling, process killing, or claimed guaranteed speedup.\n";
+ return out.str();
+}
+
 ApplyResult apply_profile(const Profile& p,const std::string& proc_root,bool dry_run){
  if(p.swappiness<0||p.swappiness>200||p.vfs_cache_pressure<1||p.vfs_cache_pressure>1000)return {false,"Invalid profile range"};
  fs::path root=fs::path(proc_root)/"sys/vm";auto sw=root/"swappiness",vf=root/"vfs_cache_pressure";
