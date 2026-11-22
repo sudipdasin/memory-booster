@@ -1,6 +1,6 @@
 # MemBoost Pro Community — v3.0.1
 
-**Native C++17 Linux memory diagnostics and conservative, confirmed tuning.** The owner has approved the **GNU General Public License version 3 or later** for this Community release. The GPL-bearing v3.0.1 release has been merged into the official `main` branch. **The owner controls public visibility.** Until the repository is made public, downloads require GitHub access.
+**Native C++17 Linux memory diagnostics and conservative, confirmed tuning.** The owner has approved the **GNU General Public License version 3 or later** for this Community release. The GPL-bearing v3.0.1 release has been merged into the official `main` branch. **The repository is now public**, with free, open-source code and versioned Linux downloads available on the homepage. Official changes still require owner-approved pull requests.
 
 ## License and public development
 
@@ -20,7 +20,7 @@ Anyone may use, modify and redistribute the Community code in compliance with GP
 | DEB, Linux archive, source, GPL and checksum ZIP | [Download ZIP](downloads/v3.0.1/MemBoost-Pro-3.0.1-download-bundle.zip?raw=1) |
 | SHA-256 manifest | [Verify downloads](downloads/v3.0.1/SHA256SUMS.txt) |
 
-These exact versioned files are committed to `main` as repository-hosted downloads. They are **not yet attached to a formal GitHub Releases entry**. Once visibility is public, verify anonymous downloads and SHA-256 checksums. The `.deb` targets a tested Debian 13 x86-64 baseline; Ubuntu 24.04 is validated separately using a VM-built package. No universal Linux compatibility or native Windows `.exe` is claimed.
+These exact versioned files are committed to `main` as repository-hosted downloads. They are **not yet attached to a formal GitHub Releases entry**. For an independent public-download check, open the ZIP and DEB links in a signed-out browser and verify the SHA-256 checksums; a separate unauthenticated check is still pending. The `.deb` targets a tested Debian 13 x86-64 baseline; Ubuntu 24.04 is validated separately using a VM-built package. No universal Linux compatibility or native Windows `.exe` is claimed.
 
 ```bash
 sudo apt install ./MemBoost-Pro-3.0.1-linux-amd64.deb
